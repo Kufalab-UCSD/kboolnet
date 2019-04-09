@@ -61,6 +61,11 @@ path      <- getPathToAttractor(network,initState)
 t_path    <- t(path)
 write.table(t_path,file=(paste0(filePrefix, '_trajectory_first_simulation.csv')), sep=",", col.names=F)
 
+# Write data in format readable by Cytoscape
+colnames(t_path)    <- sprintf("t%03d", 0:(ncol(t_path)-1))
+rownames(t_path) <- symbolMapping[,2]
+write.table(t_path,file=(paste0(filePrefix, '_trajectory_cytoscape.csv')), sep=",")
+
 ### Second simulation ###
 new_initState <- path[nrow(path),]
 new_path      <- getPathToAttractor(network,new_initState)
