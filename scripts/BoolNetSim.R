@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 
 options(stringsAsFactors = F)
-invisible(library(BoolNet))
-invisible(library(ggplot2))
-invisible(library(tidyr))
-invisible(library(optparse))
+suppressMessages(library(BoolNet))
+suppressMessages(library(ggplot2))
+suppressMessages(library(tidyr))
+suppressMessages(library(optparse))
 
 #############################################################
 # Disclaimer

@@ -1,13 +1,13 @@
 #!/usr/bin/env Rscript
 
 options(stringsAsFactors = F)
-invisible(library(dplyr))
-invisible(library(BoolNet))
-invisible(library(tidyr))
-invisible(library(CellNOptR))
-invisible(library(readr))
-invisible(library(plyr))
-invisible(source("./functions/plotPath.R"))
+suppressMessages(library(dplyr))
+suppressMessages(library(BoolNet))
+suppressMessages(library(tidyr))
+suppressMessages(library(CellNOptR))
+suppressMessages(library(readr))
+suppressMessages(library(plyr))
+suppressMessages(source("./functions/plotPath.R"))
 
 #######################################################
 # ScoreNet.R
