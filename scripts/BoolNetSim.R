@@ -4,6 +4,7 @@ options(stringsAsFactors = F)
 invisible(library(BoolNet))
 invisible(library(ggplot2))
 invisible(library(tidyr))
+invisible(library(optparse))
 
 #############################################################
 # Disclaimer
@@ -30,14 +31,20 @@ invisible(library(tidyr))
 #############################################################
 ############# 1 NETWORK LOADING AND SIMULATION ##############
 
-# : accept network as commandline argument
-args <- commandArgs(trailingOnly = TRUE)
-if(length(args) == 0) {
+# accept network as commandline argument
+option_list = list(
+  make_option("--model", action="store", default=NA, type='character',
+              help="Prefix of model to be simulated")
+)
+opt = parse_args(OptionParser(option_list=option_list))
+
+# Provide network name
+if(!is.na(opt$model)) {
+  filePrefix <- opt$model
+} else {
   stop("Please provide the name of the model.")
 }
 
-# Provide network name
-filePrefix <- args[1]
 
 # Load Network as symbolic
 network <- loadNetwork(paste0(filePrefix, ".boolnet"), symbolic=TRUE)
