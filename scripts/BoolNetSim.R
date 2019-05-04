@@ -1,9 +1,9 @@
+#!/usr/bin/env Rscript
+
 options(stringsAsFactors = F)
 invisible(library(BoolNet))
 invisible(library(ggplot2))
 invisible(library(tidyr))
-
-
 
 #############################################################
 # Disclaimer

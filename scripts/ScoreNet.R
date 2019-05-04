@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 options(stringsAsFactors = F)
 invisible(library(dplyr))
 invisible(library(BoolNet))
