@@ -5,7 +5,7 @@ invisible(library(tidyr))
 invisible(library(CellNOptR))
 invisible(library(readr))
 invisible(library(plyr))
-invisible(source("./plotPath.R"))
+invisible(source("./functions/plotPath.R"))
 
 #######################################################
 # ScoreNet.R
