@@ -8,9 +8,16 @@
 # Depends on openxlsx, dplyr
 #######################################################
 
-extractModules <- function(inPath, outPath, modules, minQuality) {
-  # Load workbook and reaction and contingency sheets
+extractModules <- function(inPath, outPath, modules = character(0), minQuality = 0) {
+  # Load workbook
   wb      <- loadWorkbook(inPath)
+
+  # Delete all comments, erorrs will happen otherwise
+  for(sheet in names(wb)){
+    removeComment(wb, sheet, 1:1000, 1:1000)
+  }
+
+  # Read reaction and contingency lists
   rxnList <- readWorkbook(xlsxFile = wb, sheet = "ReactionList", colNames = FALSE)
   conList <- readWorkbook(xlsxFile = wb, sheet = "ContingencyList", colNames = FALSE)
 
@@ -30,8 +37,10 @@ extractModules <- function(inPath, outPath, modules, minQuality) {
   rxnFiltered <- rxnList[rxnHdrRow+1:nrow(rxnList),]
   conFiltered <- conList[conHdrRow+1:nrow(conList),]
   
-  # Filter by modules present in modules argument
-  if(!missing(modules)) {
+  # Filter by modules present in modules argument (only if modules provided)
+  print(modules)
+  if(length(modules) > 0) {
+    print("doot")
     # Find which rows are in selected modules
     for (i in 1:nrow(rxnFiltered)) {
       rxnFiltered$hasModule[i] <- any(modules %in% strsplit(rxnFiltered$module[i], ",")[[1]])
@@ -50,10 +59,8 @@ extractModules <- function(inPath, outPath, modules, minQuality) {
   }
   
   # Filter by quality greater or equal to minQuality
-  if(!missing(minQuality)) {
-    rxnFiltered <- rxnFiltered %>% filter(quality >= minQuality)
-    conFiltered <- conFiltered %>% filter(quality >= minQuality)
-  }
+  rxnFiltered <- rxnFiltered %>% filter(quality >= minQuality || is.na(quality))
+  conFiltered <- conFiltered %>% filter(quality >= minQuality || is.na(quality))
   
   # Delete unfiltered data from workbook
   deleteData(wb, "ReactionList", 1:ncol(rxnList), rxnHdrRow+1:nrow(rxnList), gridExpand = T)
