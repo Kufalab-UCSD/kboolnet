@@ -38,7 +38,6 @@ extractModules <- function(inPath, outPath, modules = character(0), minQuality =
   conFiltered <- conList[conHdrRow+1:nrow(conList),]
   
   # Filter by modules present in modules argument (only if modules provided)
-  print(modules)
   if(length(modules) > 0) {
     print("doot")
     # Find which rows are in selected modules
