@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # This is the root directory of the project. Should be set by an install script of sorts in the future.
-rootDir <- "/home/adrian/Programming/internship/rxncon/"
+rootDir <- "<YOUR ROOT DIR HERE>"
 
 options(stringsAsFactors = F)
 suppressMessages(library(BoolNet))
@@ -45,8 +45,8 @@ option_list = list(
 opt = parse_args(OptionParser(option_list=option_list))
 
 # DEBUG ONLY
-opt = list(file="", out="asdf/", minQuality=0, file=NA, modules="",
-           ligands="CCL2_[rec]--0", driveFile="rxncon test")
+# opt = list(file=NA, out="asdf/", minQuality=0, file=NA, modules="",
+           # ligands="CCL2_[rec]--0", driveFile="rxncon test")
 
 # Ensure path ends with /
 outPath <- suppressWarnings(normalizePath(opt$out))
@@ -145,17 +145,17 @@ path1Attract <- getPathToAttractor(network, initStates$state) %>% t()
 rownames(path1) <- symbolMapping$name
 rownames(path1Attract) <- symbolMapping$name
 plotPath(path1)
-plotPath(path1Attract)
+plotPath(path1Attract, paste0(outPath, "1.pdf"))
 
 # Second round
 initStates$state[initStates$name %in% ligands] <- 1 # Add ligands
 path2 <- getPathToAttractor(network, initStates$state) %>% t()
 initStates$state <- path2[,ncol(path2)] # Take last value of sim as new init state
 rownames(path2) <- symbolMapping$name
-plotPath(path2)
+plotPath(path2, paste0(outPath, "2.pdf"))
 
 # Third round
 initStates$state[initStates$name %in% ligands] <- 0 # Remove ligands
 path3 <- getPathToAttractor(network, path1[,ncol(path1)]) %>% t()
 rownames(path3) <- symbolMapping$name
-plotPath(path3)
+plotPath(path3, paste0(outPath, "3.pdf"))
