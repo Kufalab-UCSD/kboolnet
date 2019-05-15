@@ -1,19 +1,5 @@
 #!/usr/bin/env Rscript
 
-# This is the root directory of the project. Should be set by an install script of sorts in the future.
-rootDir <- "<YOUR ROOT DIR HERE>"
-
-options(stringsAsFactors = F)
-suppressMessages(library(BoolNet))
-suppressMessages(library(ggplot2))
-suppressMessages(library(dplyr))
-suppressMessages(library(openxlsx))
-suppressMessages(library(googledrive))
-suppressMessages(library(optparse))
-suppressMessages(library(tidyr))
-suppressMessages(source(paste0(rootDir, "functions/extractModules.R")))
-suppressMessages(source(paste0(rootDir, "functions/plotPath.R")))
-
 #################################################
 # VerifyModel.R
 # Adrian C
@@ -24,8 +10,23 @@ suppressMessages(source(paste0(rootDir, "functions/plotPath.R")))
 
 ################# Config ###########################
 # TODO: find a better way of implementing this
+# This is the root directory of the project. Should be set by an install script of sorts in the future.
+rootDir <- "<YOUR ROOT DIR HERE>"
+
 # Path to rxncon scripts
 rxnconPath <- "~/.local/bin/"
+
+################# Library loading ##################
+options(stringsAsFactors = F)
+suppressMessages(library(BoolNet))
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+suppressMessages(library(openxlsx))
+suppressMessages(library(googledrive))
+suppressMessages(library(optparse))
+suppressMessages(library(tidyr))
+suppressMessages(source(paste0(rootDir, "functions/extractModules.R")))
+suppressMessages(source(paste0(rootDir, "functions/plotPath.R")))
 
 ################# Argument parsing #################
 option_list = list(
@@ -141,11 +142,8 @@ initStates$name <- gsub(" ", "", initStates$name)
 initStates$state[initStates$name %in% ligands] <- 0 # Remove ligands
 path1 <- getPathToAttractor(network, initStates$state) %>% t()
 initStates$state <- path1[,ncol(path1)] # Take last value of sim as new init state
-path1Attract <- getPathToAttractor(network, initStates$state) %>% t()
 rownames(path1) <- symbolMapping$name
-rownames(path1Attract) <- symbolMapping$name
-plotPath(path1)
-plotPath(path1Attract, paste0(outPath, "1.pdf"))
+plotPath(path1, paste0(outPath, "1.pdf"))
 
 # Second round
 initStates$state[initStates$name %in% ligands] <- 1 # Add ligands
