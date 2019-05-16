@@ -56,14 +56,31 @@ You must set the following variables in the `Config` section of the script:
 
 #### Running
 
-Run `VerifyModel.R` by sourcing it directly (`./VerifyModel.R`) or with `Rscript` (`Rscript ./VerifyModel.R`). The following parameters can be passed as command-line arguments (config file functionality to be added soon):
+Run `VerifyModel.R` by sourcing it directly (`./VerifyModel.R`) or with `Rscript` (`Rscript ./VerifyModel.R`).
 
-- `--file`: Path of local master rxncon file (mutually exclusive with `--driveFile`)
-- `--driveFile`: Name or URL of master rxncon file on Google Drive (mutually exclusive with `--file`)
-- `--modules`: Comma-separated modules to be loaded from master rxncon file. Omit this argument or leave it blank to load all modules.
-- `--minQuality`: Minimum quality for a rxncon rule to be loaded, default: 0. Rules without a quality tag are always loaded (Is this a good default behavior, or should it be changed?)
-- `--out`: Folder to which output files will be written, default: `./`
-- `--ligands`: Comma-separated rxncon name(s) of ligand node(s) to be toggled in verification simulation.
+Parameters can be set as command-line arguments (`VerifyModel.R --arg="value"`) or in a config file (`VerifyModel.R --config="/path/to/config.R"`, see below for config file format). Command-line arguments override parameters set in the config file.
+
+##### Parameters
+
+- `file`: Path of local master rxncon file (mutually exclusive with `--driveFile`)
+- `driveFile`: Name or URL of master rxncon file on Google Drive (mutually exclusive with `--file`)
+- `modules`: Comma-separated modules to be loaded from master rxncon file. Omit this argument or leave it blank to load all modules.
+- `minQuality`: Minimum quality for a rxncon rule to be loaded, default: 0. Rules without a quality tag are always loaded (Is this a good default behavior, or should it be changed?)
+- `out`: Folder to which output files will be written, default: `./`
+- `ligands`: Comma-separated rxncon name(s) of ligand node(s) to be toggled in verification simulation.
+
+##### Config file
+
+Config files should be `.R` files following this general format:
+
+```R
+config <- list(
+	arg1 = "value",
+	arg2 = "value",
+	arg3 = 23
+	...
+)
+```
 
 #### Output
 

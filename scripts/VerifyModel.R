@@ -8,7 +8,7 @@
 # and run a "sanity check" round of simulations.
 #################################################
 
-################# Config ###########################
+################# Config  ##########################
 # TODO: find a better way of implementing this
 # This is the root directory of the project. Should be set by an install script of sorts in the future.
 rootDir <- "<YOUR ROOT DIR HERE>"
@@ -29,25 +29,48 @@ suppressMessages(source(paste0(rootDir, "functions/extractModules.R")))
 suppressMessages(source(paste0(rootDir, "functions/plotPath.R")))
 
 ################# Argument parsing #################
+# Get commandline args
 option_list = list(
+  make_option("--config", action="store", default=NA, type="character",
+              help="Path of config file. You can specify parameters here instead of passing them as command-line
+              arguments"),
   make_option("--file", action="store", default=NA, type="character",
               help="Path of master rxncon file (local)"),
   make_option("--driveFile", action="store", default=NA, type="character",
               help="File name or path of master rxncon file (on Google Drive)"),
-  make_option("--modules", action="store", default="", type="character",
+  make_option("--modules", action="store", default=NA, type="character",
               help="Comma-separated modules to be loaded from master rxncon file [default: load all modules]"),
-  make_option("--minQuality", action="store", default=0, type="integer",
-              help="Minimum quality for rule to be loaded [default: %default]"),
-  make_option("--out", action="store", default="./", type="character",
-              help="Folder to which output files will be written [default: %default]"),
+  make_option("--minQuality", action="store", default=NA, type="integer",
+              help="Minimum quality for rule to be loaded [default: 0]"),
+  make_option("--out", action="store", default=NA, type="character",
+              help="Folder to which output files will be written [default: ./out/]"),
   make_option("--ligands", action="store", default=NA, type="character",
               help="Comma-separated rxncon name(s) of ligand node(s) to be toggled in verification simulation")
 )
-opt = parse_args(OptionParser(option_list=option_list))
+opt <- parse_args(OptionParser(option_list=option_list))
+opt <- opt[!is.na(opt)] # Discard NA values
 
-# DEBUG ONLY
-# opt = list(file=NA, out="asdf/", minQuality=0, file=NA, modules="",
-           # ligands="CCL2_[rec]--0", driveFile="rxncon test")
+# Load config file if provided
+if ("config" %in% names(opt)) {
+  source(opt$config)
+
+  if (!exists("config")) {
+    stop("No config object found in config file")
+  }
+
+  config <- config[!is.na(config)] # Discard NA values
+
+  # Keep only config values that were not passed as command line options
+  config <- config[!(names(config) %in% names(opt))]
+
+  # Merge command line args and config values
+  opt <- c(opt, config)
+}
+
+# Set default args if they are not already set
+default <- list(modules="", out="./out/", minQuality=0)
+default <- default[!(names(default) %in% names(opt))]
+opt     <- c(opt, default)
 
 # Ensure path ends with /
 outPath <- suppressWarnings(normalizePath(opt$out))
