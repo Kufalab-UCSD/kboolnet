@@ -162,3 +162,6 @@ dmypy.json
 # Rstudio files
 .Rproj.user
 *.Rproj
+
+# ghostwriter files
+*.backup
