@@ -87,10 +87,13 @@ if (opt$minQuality < 0) {
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
   
-  # Find the file in Drive
-  gDriveID <- drive_find(pattern = opt$driveFile, type = "spreadsheet")[1,]
-  if(is.na(gDriveID$name)) { # If file does not exist
-    stop("rxncon file does not exist in Google Drive")
+  if(grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
+    gDriveID <- as_id(opt$driveFile)
+  } else { # Search for the file in Drive if name provided
+    gDriveID <- drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1]
+    if(is.na(gDriveID$name)) { # If file does not exist
+      stop("rxncon file does not exist in Google Drive")
+    }
   }
   
   # Download file
