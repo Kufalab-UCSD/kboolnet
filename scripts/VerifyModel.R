@@ -11,7 +11,7 @@
 ################# Config  ##########################
 # TODO: find a better way of implementing this
 # This is the root directory of the project. Should be set by an install script of sorts in the future.
-rootDir <- "<YOUR ROOT DIR HERE>"
+kboolnetPath <- "~/Programming/internship/rxncon/"
 
 # Path to rxncon scripts
 rxnconPath <- "~/.local/bin/"
@@ -25,8 +25,8 @@ suppressMessages(library(openxlsx))
 suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
-suppressMessages(source(paste0(rootDir, "functions/extractModules.R")))
-suppressMessages(source(paste0(rootDir, "functions/plotPath.R")))
+suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
+suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
 
 ################# Argument parsing #################
 # Get commandline args
@@ -68,7 +68,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0)
+default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
@@ -120,7 +120,7 @@ if (!(is.na(opt$driveFile))) {
   }
   
   # Download file
-  masterFile  <- paste0(outPath, gDriveID$name, ".xlsx")
+  masterFile  <- paste0(outPath, "master.xlsx")
   drive_download(gDriveID, path = masterFile, type = "xlsx", overwrite = T) # Download the file
   cat("Downloaded.", "\n")
   
