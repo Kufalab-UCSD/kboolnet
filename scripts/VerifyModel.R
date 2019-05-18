@@ -74,7 +74,7 @@ opt     <- c(opt, default)
 
 # Ensure path ends with /
 outPath <- suppressWarnings(normalizePath(opt$out))
-outPath <- gsub("/$", "/", outPath)
+outPath <- gsub("/$", "", outPath)
 outPath <- paste0(outPath, "/")
 
 # Create out dir if it does not exist
@@ -116,8 +116,8 @@ if (!(is.na(opt$driveFile))) {
   if(grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
     gDriveID <- as_id(opt$driveFile)
   } else { # Search for the file in Drive if name provided
-    gDriveID <- drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1]
-    if(is.na(gDriveID)) { # If file does not exist
+    gDriveID <- as_id(drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1])
+  if(is.na(gDriveID)) { # If file does not exist
       stop("rxncon file does not exist in Google Drive")
     }
   }
