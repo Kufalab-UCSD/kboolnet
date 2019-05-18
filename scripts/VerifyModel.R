@@ -88,6 +88,9 @@ modules <- gsub("^ *", "", modules) # Remove leading spaces
 modules <- gsub(" *$", "", modules) # Remove trailing spaces
 
 # Same for ligands option
+if (is.na(ligands)) {
+  stop("Please provide ligand(s) to be toggled in simulation rounds")
+}
 ligands <- strsplit(opt$ligands, ",")[[1]]
 ligands <- gsub("^ *", "", ligands) # Remove leading spaces
 ligands <- gsub(" *$", "", ligands) # Remove trailing spaces
