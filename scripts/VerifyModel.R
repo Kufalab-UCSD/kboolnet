@@ -11,7 +11,7 @@
 ################# Config  ##########################
 # TODO: find a better way of implementing this
 # This is the root directory of the project. Should be set by an install script of sorts in the future.
-kboolnetPath <- "~/Programming/internship/rxncon/"
+kboolnetPath <- ""
 
 # Path to rxncon scripts
 rxnconPath <- "~/.local/bin/"
@@ -88,7 +88,7 @@ modules <- gsub("^ *", "", modules) # Remove leading spaces
 modules <- gsub(" *$", "", modules) # Remove trailing spaces
 
 # Same for ligands option
-if (is.na(ligands)) {
+if (is.na(opt$ligands)) {
   stop("Please provide ligand(s) to be toggled in simulation rounds")
 }
 ligands <- strsplit(opt$ligands, ",")[[1]]
@@ -96,9 +96,9 @@ ligands <- gsub("^ *", "", ligands) # Remove leading spaces
 ligands <- gsub(" *$", "", ligands) # Remove trailing spaces
 
 # Make sure input file path was provided
-if (is.na(opt$file) && is.na(opt$driveFile)){ # If neither file was provided
+if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
   stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
-} else if ((!is.na(opt$file)) && (!is.na(opt$driveFile))) { # If both files were provided
+} else if ((!is.na(opt$file)) & (!is.na(opt$driveFile))) { # If both files were provided
   stop("Please provide only one path with EITHER --file or --driveFile")
 }
 

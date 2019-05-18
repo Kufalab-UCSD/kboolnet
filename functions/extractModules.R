@@ -58,8 +58,8 @@ extractModules <- function(inPath, outPath, modules = character(0), minQuality =
   }
   
   # Filter by quality greater or equal to minQuality
-  rxnFiltered <- rxnFiltered %>% filter(quality >= minQuality || is.na(quality))
-  conFiltered <- conFiltered %>% filter(quality >= minQuality || is.na(quality))
+  rxnFiltered <- rxnFiltered %>% filter(quality >= minQuality | is.na(quality))
+  conFiltered <- conFiltered %>% filter(quality >= minQuality | is.na(quality))
   
   # Delete unfiltered data from workbook
   deleteData(wb, "ReactionList", 1:ncol(rxnList), rxnHdrRow+1:nrow(rxnList), gridExpand = T)
