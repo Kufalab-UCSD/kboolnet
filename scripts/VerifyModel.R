@@ -11,7 +11,7 @@
 ################# Config  ##########################
 # TODO: find a better way of implementing this
 # This is the root directory of the project. Should be set by an install script of sorts in the future.
-kboolnetPath <- "~/Programming/internship/rxncon/"
+kboolnetPath <- ""
 
 # Path to rxncon scripts
 rxnconPath <- "~/.local/bin/"
@@ -74,7 +74,7 @@ opt     <- c(opt, default)
 
 # Ensure path ends with /
 outPath <- suppressWarnings(normalizePath(opt$out))
-outPath <- gsub("/$", "/", outPath)
+outPath <- gsub("/$", "", outPath)
 outPath <- paste0(outPath, "/")
 
 # Create out dir if it does not exist
@@ -88,14 +88,17 @@ modules <- gsub("^ *", "", modules) # Remove leading spaces
 modules <- gsub(" *$", "", modules) # Remove trailing spaces
 
 # Same for ligands option
+if (is.na(opt$ligands)) {
+  stop("Please provide ligand(s) to be toggled in simulation rounds")
+}
 ligands <- strsplit(opt$ligands, ",")[[1]]
 ligands <- gsub("^ *", "", ligands) # Remove leading spaces
 ligands <- gsub(" *$", "", ligands) # Remove trailing spaces
 
 # Make sure input file path was provided
-if (is.na(opt$file) && is.na(opt$driveFile)){ # If neither file was provided
+if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
   stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
-} else if ((!is.na(opt$file)) && (!is.na(opt$driveFile))) { # If both files were provided
+} else if ((!is.na(opt$file)) & (!is.na(opt$driveFile))) { # If both files were provided
   stop("Please provide only one path with EITHER --file or --driveFile")
 }
 
@@ -113,8 +116,8 @@ if (!(is.na(opt$driveFile))) {
   if(grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
     gDriveID <- as_id(opt$driveFile)
   } else { # Search for the file in Drive if name provided
-    gDriveID <- drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1]
-    if(is.na(gDriveID$name)) { # If file does not exist
+    gDriveID <- as_id(drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1])
+  if(is.na(gDriveID)) { # If file does not exist
       stop("rxncon file does not exist in Google Drive")
     }
   }
