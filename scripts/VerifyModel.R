@@ -117,7 +117,7 @@ if (!(is.na(opt$driveFile))) {
     gDriveID <- as_id(opt$driveFile)
   } else { # Search for the file in Drive if name provided
     gDriveID <- drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1]
-    if(is.na(gDriveID$name)) { # If file does not exist
+    if(is.na(gDriveID)) { # If file does not exist
       stop("rxncon file does not exist in Google Drive")
     }
   }
