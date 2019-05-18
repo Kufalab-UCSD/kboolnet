@@ -51,7 +51,7 @@ Git should do the job of merging changes to the same file. If you run into confl
 
 You must set the following variables in the `Config` section of the script:
 
-- `rootDir`: Root directory of the kboolnet repository
+- `kboolnetPath`: Root directory of the kboolnet repository
 - `rxnconPath`: Directory where the `rxncon2boolnet.py` script is stored (likely `~/.local/bin`)
 
 #### Running
