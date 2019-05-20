@@ -17,7 +17,7 @@ To check out a branch, run: `git checkout <branch>`
 
 Dependencies: `BoolNet`, `ggplot2`, `dplyr`, `openxlsx`, `googledrive`, `optparse`, `tidyr`, `CellNOptR`, `plyr`
 
-To install these dependencies, run: `install.packages("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr")`
+To install these dependencies, run: `install.packages(pkgs=c("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr"), dependencies=TRUE)`
 
 
 ## Contributing
