@@ -8,14 +8,6 @@
 # and run a "sanity check" round of simulations.
 #################################################
 
-################# Config  ##########################
-# TODO: find a better way of implementing this
-# This is the root directory of the project. Should be set by an install script of sorts in the future.
-kboolnetPath <- ""
-
-# Path to rxncon scripts
-rxnconPath <- "~/.local/bin/"
-
 ################# Library loading ##################
 options(stringsAsFactors = F)
 suppressMessages(library(BoolNet))
@@ -25,8 +17,6 @@ suppressMessages(library(openxlsx))
 suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
-suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
 
 ################# Argument parsing #################
 # Get commandline args
@@ -34,6 +24,10 @@ option_list = list(
   make_option("--config", action="store", default=NA, type="character",
               help="Path of config file. You can specify parameters here instead of passing them as command-line
               arguments"),
+  make_option("--kboolnetPath", action="store", default=NA, type="character",
+              help="Path to root directory of kboolnet repository"),
+  make_option("--rxnconPath", action="store", default=NA, type="character",
+              help="Path to directory containing rxncon scripts"),
   make_option("--file", action="store", default=NA, type="character",
               help="Path of master rxncon file (local)"),
   make_option("--driveFile", action="store", default=NA, type="character",
@@ -71,6 +65,10 @@ if ("config" %in% names(opt)) {
 default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
+
+# Load functions
+suppressMessages(source(paste0(opt$kboolnetPath, "functions/extractModules.R")))
+suppressMessages(source(paste0(opt$kboolnetPath, "functions/plotPath.R")))
 
 # Ensure path ends with /
 outPath <- suppressWarnings(normalizePath(opt$out))
@@ -146,7 +144,7 @@ cat("Modules written to", modulesFile, "\n")
 
 # Pass files to rxncon for processing
 command <- paste0("cd ", outPath, " && ",
-                  "python3 ", rxnconPath, "rxncon2boolnet.py ", modulesFile)
+                  "python3 ", opt$rxnconPath, "rxncon2boolnet.py ", modulesFile)
 system(command)
 
 ################# Load BoolNet files ######################
