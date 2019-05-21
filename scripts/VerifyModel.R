@@ -66,19 +66,19 @@ default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, dri
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
+# Create out dir if it does not exist
+if (!dir.exists(opt$out)) {
+  dir.create(opt$out)
+}
+
+# Normalize paths
+outPath       <- paste0(normalizePath(opt$out), "/")
+kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
+rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
+
 # Load functions
 suppressMessages(source(paste0(opt$kboolnetPath, "functions/extractModules.R")))
 suppressMessages(source(paste0(opt$kboolnetPath, "functions/plotPath.R")))
-
-# Ensure path ends with /
-outPath <- suppressWarnings(normalizePath(opt$out))
-outPath <- gsub("/$", "", outPath)
-outPath <- paste0(outPath, "/")
-
-# Create out dir if it does not exist
-if (!dir.exists(outPath)) {
-  dir.create(outPath)
-}
 
 # Parse modules option to a list
 modules <- strsplit(opt$modules, ",")[[1]]
@@ -127,7 +127,7 @@ if (!(is.na(opt$driveFile))) {
   
 # If local file provided
 } else {
-  masterFile <- suppressWarnings(normalizePath(opt$file))
+  masterFile <- normalizePath(opt$file)
   
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
