@@ -111,12 +111,39 @@ if (opt$minQuality < 0) {
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
   
-  if(grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
-    gDriveID <- as_id(opt$driveFile)
+  if (grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
+    # Deactivate authentication and try and access file 
+    drive_auth_config(active = FALSE)
+    
+    # Try accessing file without authentication
+    gDriveID <- tryCatch({
+      drive_get(id = as_id(opt$driveFile))$id[1]
+    }, error = function(e) {
+      # If access fails, ask user if they want to try again with authentication
+      repeat {
+        i <- readline(prompt = "Public Google Drive file not found. Try again with authentication? (y)es/(n)o: ")
+        
+        if (grepl("^(?:yes|y)$", i, ignore.case = TRUE)) {
+          drive_auth_config(active = TRUE) # Activate authentication
+          
+          return(tryCatch({ # Try to find file again
+            drive_get(id = as_id(opt$driveFile))$id[1]
+            
+          }, error = function(e){ # If it fails again
+            stop("Google Drive file not found. Either the file does not exist or you do not have permission to view it.")
+          }))
+        } else if (grepl("^(?:no|n)$", i, ignore.case = TRUE)){
+          stop("Please provide an input file for rxncon.")
+        }
+      }
+    })
   } else { # Search for the file in Drive if name provided
+    # Activate Google Drive authentication, required for searching in a user's drive
+    drive_auth_config(active = TRUE)
+    
     gDriveID <- as_id(drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1])
   if(is.na(gDriveID)) { # If file does not exist
-      stop("rxncon file does not exist in Google Drive")
+      stop("File not found in Google Drive.")
     }
   }
   
