@@ -17,7 +17,7 @@ To check out a branch, run: `git checkout <branch>`
 
 Dependencies: `BoolNet`, `ggplot2`, `dplyr`, `openxlsx`, `googledrive`, `optparse`, `tidyr`, `CellNOptR`, `plyr`
 
-To install these dependencies, run: `install.packages("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr")`
+To install these dependencies, run: `install.packages(pkgs=c("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr"), dependencies=TRUE)`
 
 
 ## Contributing
@@ -47,13 +47,6 @@ Git should do the job of merging changes to the same file. If you run into confl
 
 ![Verification simulation flowchart](https://i.ibb.co/5KjFpwT/image.png)
 
-#### Before running
-
-You must set the following variables in the `Config` section of the script:
-
-- `kboolnetPath`: Root directory of the kboolnet repository
-- `rxnconPath`: Directory where the `rxncon2boolnet.py` script is stored (likely `~/.local/bin`)
-
 #### Running
 
 Run `VerifyModel.R` by sourcing it directly (`./VerifyModel.R`) or with `Rscript` (`Rscript ./VerifyModel.R`).
@@ -62,6 +55,8 @@ Parameters can be set as command-line arguments (`VerifyModel.R --arg="value"`) 
 
 ##### Parameters
 
+- `kboolnetPath`: Root directory of the kboolnet repository
+- `rxnconPath`: Directory where the `rxncon2boolnet.py` script is stored (likely `~/.local/bin`)
 - `file`: Path of local master rxncon file (mutually exclusive with `--driveFile`)
 - `driveFile`: Name or URL of master rxncon file on Google Drive (mutually exclusive with `--file`)
 - `modules`: Comma-separated modules to be loaded from master rxncon file. Omit this argument or leave it blank to load all modules.
@@ -75,8 +70,8 @@ Config files should be `.R` files following this general format:
 
 ```R
 config <- list(
-	arg1 = "value",
-	arg2 = "value",
+	arg1 = "string value",
+	arg2 = FALSE,
 	arg3 = 23
 	...
 )

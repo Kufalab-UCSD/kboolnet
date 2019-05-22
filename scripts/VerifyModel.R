@@ -8,14 +8,6 @@
 # and run a "sanity check" round of simulations.
 #################################################
 
-################# Config  ##########################
-# TODO: find a better way of implementing this
-# This is the root directory of the project. Should be set by an install script of sorts in the future.
-kboolnetPath <- ""
-
-# Path to rxncon scripts
-rxnconPath <- "~/.local/bin/"
-
 ################# Library loading ##################
 options(stringsAsFactors = F)
 suppressMessages(library(BoolNet))
@@ -25,8 +17,6 @@ suppressMessages(library(openxlsx))
 suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
-suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
 
 ################# Argument parsing #################
 # Get commandline args
@@ -34,6 +24,10 @@ option_list = list(
   make_option("--config", action="store", default=NA, type="character",
               help="Path of config file. You can specify parameters here instead of passing them as command-line
               arguments"),
+  make_option("--kboolnetPath", action="store", default=NA, type="character",
+              help="Path to root directory of kboolnet repository"),
+  make_option("--rxnconPath", action="store", default=NA, type="character",
+              help="Path to directory containing rxncon scripts"),
   make_option("--file", action="store", default=NA, type="character",
               help="Path of master rxncon file (local)"),
   make_option("--driveFile", action="store", default=NA, type="character",
@@ -72,28 +66,28 @@ default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, dri
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
-# Ensure path ends with /
-outPath <- suppressWarnings(normalizePath(opt$out))
-outPath <- gsub("/$", "", outPath)
-outPath <- paste0(outPath, "/")
-
 # Create out dir if it does not exist
-if (!dir.exists(outPath)) {
-  dir.create(outPath)
+if (!dir.exists(opt$out)) {
+  dir.create(opt$out)
 }
 
+# Normalize paths
+outPath       <- paste0(normalizePath(opt$out), "/")
+kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
+rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
+
+# Load functions
+suppressMessages(source(paste0(opt$kboolnetPath, "functions/extractModules.R")))
+suppressMessages(source(paste0(opt$kboolnetPath, "functions/plotPath.R")))
+
 # Parse modules option to a list
-modules <- strsplit(opt$modules, ",")[[1]]
-modules <- gsub("^ *", "", modules) # Remove leading spaces
-modules <- gsub(" *$", "", modules) # Remove trailing spaces
+modules <- trimws(strsplit(opt$modules, ",")[[1]])
 
 # Same for ligands option
 if (is.na(opt$ligands)) {
   stop("Please provide ligand(s) to be toggled in simulation rounds")
 }
-ligands <- strsplit(opt$ligands, ",")[[1]]
-ligands <- gsub("^ *", "", ligands) # Remove leading spaces
-ligands <- gsub(" *$", "", ligands) # Remove trailing spaces
+ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
 
 # Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
@@ -113,12 +107,39 @@ if (opt$minQuality < 0) {
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
   
-  if(grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
-    gDriveID <- as_id(opt$driveFile)
+  if (grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
+    # Deactivate authentication and try and access file 
+    drive_auth_config(active = FALSE)
+    
+    # Try accessing file without authentication
+    gDriveID <- tryCatch({
+      drive_get(id = as_id(opt$driveFile))$id[1]
+    }, error = function(e) {
+      # If access fails, ask user if they want to try again with authentication
+      repeat {
+        i <- readline(prompt = "Public Google Drive file not found. Try again with authentication? (y)es/(n)o: ")
+        
+        if (grepl("^(?:yes|y)$", i, ignore.case = TRUE)) {
+          drive_auth_config(active = TRUE) # Activate authentication
+          
+          return(tryCatch({ # Try to find file again
+            drive_get(id = as_id(opt$driveFile))$id[1]
+            
+          }, error = function(e){ # If it fails again
+            stop("Google Drive file not found. Either the file does not exist or you do not have permission to view it.")
+          }))
+        } else if (grepl("^(?:no|n)$", i, ignore.case = TRUE)){
+          stop("Please provide an input file for rxncon.")
+        }
+      }
+    })
   } else { # Search for the file in Drive if name provided
+    # Activate Google Drive authentication, required for searching in a user's drive
+    drive_auth_config(active = TRUE)
+    
     gDriveID <- as_id(drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1])
   if(is.na(gDriveID)) { # If file does not exist
-      stop("rxncon file does not exist in Google Drive")
+      stop("File not found in Google Drive.")
     }
   }
   
@@ -129,7 +150,7 @@ if (!(is.na(opt$driveFile))) {
   
 # If local file provided
 } else {
-  masterFile <- suppressWarnings(normalizePath(opt$file))
+  masterFile <- normalizePath(opt$file)
   
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
@@ -146,7 +167,7 @@ cat("Modules written to", modulesFile, "\n")
 
 # Pass files to rxncon for processing
 command <- paste0("cd ", outPath, " && ",
-                  "python3 ", rxnconPath, "rxncon2boolnet.py ", modulesFile)
+                  "python3 ", opt$rxnconPath, "rxncon2boolnet.py ", modulesFile)
 system(command)
 
 ################# Load BoolNet files ######################

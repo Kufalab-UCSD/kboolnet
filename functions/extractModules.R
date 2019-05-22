@@ -25,13 +25,11 @@ extractModules <- function(inPath, outPath, modules = character(0), minQuality =
   rxnHdrRow <- grep("!UID:Reaction", rxnList[,1], fixed = T)
   colnames(rxnList)[grep("!Quality", rxnList[rxnHdrRow,], fixed = T)] <- "quality"
   colnames(rxnList)[grep("!Module", rxnList[rxnHdrRow,], fixed = T)]  <- "module"
-  rxnList$module <- gsub(", ", ",", rxnList$module) # Remove trailing spaces
   
   # Do same for contingency sheet
   conHdrRow <- grep("!UID:Contingency", conList[,1], fixed = T)
   colnames(conList)[grep("!Quality", conList[conHdrRow,], fixed = T)] <- "quality"
   colnames(conList)[grep("!Module", conList[conHdrRow,], fixed = T)]  <- "module"
-  conList$module <- gsub(", ", ",", conList$module) # Remove trailing spaces
   
   # Select all rule rows
   rxnFiltered <- rxnList[rxnHdrRow+1:nrow(rxnList),]
@@ -42,10 +40,10 @@ extractModules <- function(inPath, outPath, modules = character(0), minQuality =
     print("doot")
     # Find which rows are in selected modules
     for (i in 1:nrow(rxnFiltered)) {
-      rxnFiltered$hasModule[i] <- any(modules %in% strsplit(rxnFiltered$module[i], ",")[[1]])
+      rxnFiltered$hasModule[i] <- any(modules %in% trimws(strsplit(rxnFiltered$module[i], ",")[[1]]))
     }
     for (i in 1:nrow(conFiltered)) {
-      conFiltered$hasModule[i] <- any(modules %in% strsplit(conFiltered$module[i], ",")[[1]])
+      conFiltered$hasModule[i] <- any(modules %in% trimws(strsplit(conFiltered$module[i], ",")[[1]]))
     }
     
     # Save only those rows with selected modules
