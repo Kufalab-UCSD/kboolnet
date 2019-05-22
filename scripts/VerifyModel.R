@@ -81,17 +81,13 @@ suppressMessages(source(paste0(opt$kboolnetPath, "functions/extractModules.R")))
 suppressMessages(source(paste0(opt$kboolnetPath, "functions/plotPath.R")))
 
 # Parse modules option to a list
-modules <- strsplit(opt$modules, ",")[[1]]
-modules <- gsub("^ *", "", modules) # Remove leading spaces
-modules <- gsub(" *$", "", modules) # Remove trailing spaces
+modules <- trimws(strsplit(opt$modules, ",")[[1]])
 
 # Same for ligands option
 if (is.na(opt$ligands)) {
   stop("Please provide ligand(s) to be toggled in simulation rounds")
 }
-ligands <- strsplit(opt$ligands, ",")[[1]]
-ligands <- gsub("^ *", "", ligands) # Remove leading spaces
-ligands <- gsub(" *$", "", ligands) # Remove trailing spaces
+ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
 
 # Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
