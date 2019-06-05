@@ -6,6 +6,6 @@ config <- list(
     minQuality = 0,
     out = "./out/",
     ligands = "CCL2",
-    rounds = 6
+    maxrounds = 20
 )
 

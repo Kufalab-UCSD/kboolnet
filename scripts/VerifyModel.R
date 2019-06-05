@@ -18,6 +18,25 @@ suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
 
+################ Function definitions #################
+
+plotCompMat <- function(mat) {
+  # Plot comparison matrices (w/ ligand)
+  df <- as.data.frame(mat)
+  colnames(df) <- 1:ncol(df)
+  rows <- nrow(df)
+  df <- cbind(1:rows, df)
+  colnames(df)[1] <- "y"
+  df <- gather(df, "x", "value", 2:(rows+1), na.rm = T) # Rearrange data for plotting
+  df <- transform(df, x = as.numeric(x))
+  p <- ggplot(df, aes(x, y)) + geom_tile(aes(fill = value), color = "lightgrey") +
+    scale_x_continuous(position = "top", expand = c(0,0), breaks=1:rows) + scale_y_reverse(expand=c(0,0), breaks=rows:1) +
+    scale_fill_gradient2(limits=c(0,1), low = "red", mid="white", high="steelblue", midpoint = 0.5) +
+    theme_classic() + theme(axis.line = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
+                            axis.text = element_text(size = 10), panel.grid.minor = element_line(color = "lightgrey")) + coord_equal()
+  return(p)
+}
+
 ################# Argument parsing #################
 # Get commandline args
 option_list = list(
@@ -41,7 +60,7 @@ option_list = list(
   make_option("--ligands", action="store", default=NA, type="character",
               help="Comma-separated rxncon name(s) of ligand node(s) to be toggled in verification simulation"),
   make_option("--rounds", action="store", default=NA, type="integer",
-              help="Number of ligand/no-ligand simulation pairs that should be run (default: 2)")
+              help="Maximum number of ligand/no-ligand simulation pairs that should be run (default: 20)")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 opt <- opt[!is.na(opt)] # Discard NA values
@@ -64,7 +83,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=2)
+default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
@@ -105,9 +124,9 @@ if (opt$minQuality < 0) {
   stop("minQuality must be >= 0")
 }
 
-rounds <- opt$rounds
-if (opt$rounds < 2) {
-  stop("rounds must be >= 2")
+maxrounds <- opt$maxrounds
+if (opt$maxrounds < 2) {
+  stop("maxrounds must be >= 2")
 }
 
 ################ Load and process rxncon file ###################
@@ -171,6 +190,7 @@ if (!(is.na(opt$driveFile))) {
 
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
+cat("Extracting modules...", "\n")
 extractModules(inPath = masterFile, outPath = modulesFile, minQuality = minQuality, modules = modules)
 cat("Modules written to", modulesFile, "\n")
 
@@ -195,15 +215,21 @@ initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
 
 ####################### Simulate #########################
-
 # Lists to store simulation results
 ligAttr   <- list()
 ligPath   <- list()
 noLigAttr <- list()
 noLigPath <- list()
 
+# Matrices to store comparison results
+scoreLig   <- matrix(nrow = maxrounds, ncol = maxrounds)
+scoreNoLig <- matrix(nrow = maxrounds, ncol = maxrounds)
+
 # Simulation rounds
-for (i in 1:rounds) {
+cat("Starting simulations...", "\n")
+rounds <- 0
+for (i in 1:maxrounds) {
+  rounds <- rounds + 1
   # Remove ligands 
   for (lig in 1:length(ligands)){
     initStates$state <- unbindLigand(ligands[lig], initStates$name, initStates$state) # Unbind ligand from complexes
@@ -228,63 +254,59 @@ for (i in 1:rounds) {
   initStates$state  <- ligPath[[i]][,ncol(ligPath[[i]])] # Get only attractor of no lig path
   ligAttr[[i]]      <- getPathToAttractor(network, initStates$state) %>% t()
   rownames(ligAttr[[i]]) <- initStates$name
-}
-
-################## Simulation comparison ##########################
-# Matrices to store comparison results
-scoreLig   <- matrix(nrow = rounds, ncol = rounds)
-scoreNoLig <- matrix(nrow = rounds, ncol = rounds)
-
-# Compare all matrices to each other
-for (i in 1:rounds) {
-  for (j in i:rounds) {
-    scoreLig[i,j]   <- compMatrix(ligAttr[[i]], ligAttr[[j]])
-    scoreNoLig[i,j] <- compMatrix(noLigAttr[[i]], noLigAttr[[j]])
+  
+  # Compare this round of simulation to previous rounds
+  for (j in 1:rounds) {
+    scoreLig[j,rounds] <- compMatrix(ligAttr[[rounds]], ligAttr[[j]])
+    scoreNoLig[j,rounds] <- compMatrix(noLigAttr[[rounds]], noLigAttr[[j]])
+  }
+  
+  # If both ligand and no-ligand simulations are identical to a previous round, then we know a
+  # "meta-attractor" has been found and we can stop simulation
+  if (rounds != 1 & any(scoreLig[1:rounds-1,rounds] == 1) & any(scoreNoLig[1:rounds-1,rounds] == 1)) {
+    cat("Meta-attractor found! Stopping simulation.", "\n")
+    break
+  } else if (rounds == maxrounds) {
+    cat("Max number of simulation rounds reached! Stopping simulation.", "\n")
   }
 }
 
-write.csv(scoreLig, file = paste0(outPath, "lig_simulation_comparison.csv"))
-write.csv(scoreNoLig, file = paste0(outPath, "nolig_simulation_comparison.csv"))
+# Remove extra rows/columnds from comparison matrices
+scoreLig   <- scoreLig[1:rounds,1:rounds]
+scoreNoLig <- scoreNoLig[1:rounds,1:rounds]
 
-plotCompMat <- function(mat) {
-  # Plot comparison matrices (w/ ligand)
-  df <- as.data.frame(mat)
-  colnames(df) <- 1:ncol(df)
-  rows <- nrow(df)
-  df <- cbind(1:rows, df)
-  colnames(df)[1] <- "y"
-  df <- gather(df, "x", "value", 2:(rows+1), na.rm = T) # Rearrange data for plotting
-  df <- transform(df, x = as.numeric(x))
-  p <- ggplot(df, aes(x, y)) + geom_tile(aes(fill = value), color = "lightgrey") +
-    scale_x_continuous(position = "top", expand = c(0,0), breaks=1:rows) + scale_y_reverse(expand=c(0,0), breaks=rows:1) +
-    scale_fill_gradient2(limits=c(0,1), low = "red", mid="white", high="steelblue", midpoint = 0.5) +
-    theme_classic() + theme(axis.line = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
-                            axis.text = element_text(size = 10), panel.grid.minor = element_line(color = "lightgrey")) + coord_equal()
-  return(p)
-}
+##################### Plot and save data ##############################
+cat("Simulations complete after", rounds, "rounds.", "\n")
+# Create output subdirs if they do not exist
+if (!dir.exists(paste0(outPath, "lig/"))) dir.create(paste0(outPath, "lig/"))
+if (!dir.exists(paste0(outPath, "lig/attractor/"))) dir.create(paste0(outPath, "lig/attractor/"))
+if (!dir.exists(paste0(outPath, "lig/path/"))) dir.create(paste0(outPath, "lig/path/"))
+if (!dir.exists(paste0(outPath, "nolig/"))) dir.create(paste0(outPath, "nolig/"))
+if (!dir.exists(paste0(outPath, "nolig/attractor/"))) dir.create(paste0(outPath, "nolig/attractor/"))
+if (!dir.exists(paste0(outPath, "nolig/path/"))) dir.create(paste0(outPath, "nolig/path/"))
 
-scoreLigPlot <- plotCompMat(scoreLig)
+# Write comparison data 
+write.csv(scoreLig, file = paste0(outPath, "lig/simulation_comparison.csv"))
+write.csv(scoreNoLig, file = paste0(outPath, "nolig/simulation_comparison.csv"))
+
+# Plot the attractor comparison matrices
+scoreLigPlot   <- plotCompMat(scoreLig)
 scoreNoLigPlot <- plotCompMat(scoreNoLig)
-
-##################### Save plots ##############################
-# Create out dir if it does not exist
-figsPath <- paste0(outPath, "figs/")
-if (!dir.exists(figsPath)) {
-  dir.create(figsPath)
-}
-
-# Save the attractor comparison matrices
-suppressMessages(ggsave(paste0(figsPath, "scoreLig.pdf"), device="pdf", plot=scoreLigPlot))
-suppressMessages(ggsave(paste0(figsPath, "scoreNoLig.pdf"), device="pdf", plot=scoreNoLigPlot))
+suppressMessages(ggsave(paste0(outPath, "lig/simulation_comparison.pdf"), device="pdf", plot=scoreLigPlot))
+suppressMessages(ggsave(paste0(outPath, "nolig/simulation_comparison.pdf"), device="pdf", plot=scoreNoLigPlot))
 
 for (i in 1:rounds) {
-  # Save ligand paths/attractors
-  plotPath(path = ligPath[[i]], filePath = paste0(figsPath, i, "_lig_path.pdf"))
-  plotPath(path = ligAttr[[i]], filePath = paste0(figsPath, i, "_lig_attr.pdf"))
+  # Plot ligand paths/attractors
+  plotPath(path = ligPath[[i]], filePath = paste0(outPath, "lig/path/" , i, ".pdf"))
+  plotPath(path = ligAttr[[i]], filePath = paste0(outPath, "lig/attractor/", i, ".pdf"))
+  write.csv(ligPath[[i]], file = paste0(outPath, "lig/path/" , i, ".csv"))
+  write.csv(ligAttr[[i]], file = paste0(outPath, "lig/attractor/" , i, ".csv"))
   
-  # Save no ligand paths/attractors
-  plotPath(path = noLigPath[[i]], filePath = paste0(figsPath, i, "_nolig_path.pdf"))
-  plotPath(path = noLigAttr[[i]], filePath = paste0(figsPath, i, "_nolig_attr.pdf"))
+  # Plot no ligand paths/attractors
+  plotPath(path = noLigPath[[i]], filePath = paste0(outPath, "nolig/path/" , i, ".pdf"))
+  plotPath(path = noLigAttr[[i]], filePath = paste0(outPath, "nolig/attractor/", i, ".pdf"))
+  write.csv(noLigPath[[i]], file = paste0(outPath, "nolig/path/" , i, ".csv"))
+  write.csv(noLigAttr[[i]], file = paste0(outPath, "nolig/attractor/" , i, ".csv"))
 }
 
-cat("Plots saved to", figsPath, "\n")
+cat("Done.", "\n")
