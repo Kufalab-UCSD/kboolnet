@@ -5,6 +5,7 @@ config <- list(
     modules = "", 
     minQuality = 0,
     out = "./out/",
-    ligands = "CCL2_[rec]--{0}"
+    ligands = "CCL2",
+    maxrounds = 20
 )
 

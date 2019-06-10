@@ -13,6 +13,7 @@
 #   - (filePath): Path to save PDF of graph, default: don't save
 #   - (ratio): Width/length ratio of plot grid, default: 0.8
 # 
+# Dependencies: ggplot2, dplyr, tidyr
 ############################################################
 
 plotPath <- function(path, filePath = "", ratio = 0.8) {
@@ -38,5 +39,5 @@ plotPath <- function(path, filePath = "", ratio = 0.8) {
     ggsave(paste0(filePath, ".pdf"), plot = last_plot(), height=(5 + length(levels(p$data$symbols)) * 0.25), width=(10 + length(levels(p$data$t)) * 0.45), scale = 1, units = "cm")
   }
   
-  print(p)
+  return(p)
 }
