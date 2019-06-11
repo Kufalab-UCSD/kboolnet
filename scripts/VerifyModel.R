@@ -94,8 +94,10 @@ if (!dir.exists(opt$out)) {
 
 # Normalize paths
 outPath       <- paste0(normalizePath(opt$out), "/")
-kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
-rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
+kboolnetPath  <- tryCatch(paste0(normalizePath(opt$kboolnetPath), "/"),
+                          warning=function(w) if (grepl("No such file or directory", w)) stop("Please set the kboolnetPath parameter to a valid directory"))
+rxnconPath    <- tryCatch(paste0(normalizePath(opt$rxnconPath), "/"),
+                          warning=function(w) if (grepl("No such file or directory", w)) stop("Please set the rxnconPath parameter to a valid directory"))
 
 # Load functions
 suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
