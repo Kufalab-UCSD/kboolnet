@@ -83,9 +83,32 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20)
+default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20, kboolnetPath=NA, rxnconPath=NA)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
+
+# Make sure necessary parameters were passed
+if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
+  stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
+} else if ((!is.na(opt$file)) & (!is.na(opt$driveFile))) { # If both files were provided
+  stop("Please provide only one path with EITHER --file or --driveFile")
+} else if (is.na(opt$kboolnetPath)) {
+  stop("Please provide path to the kboolnet repository with --kboolnetPath")
+} else if (is.na(opt$ligands)) {
+  stop("Please provide ligand(s) to be toggled in simulation rounds with --ligands")
+} else if (is.na(opt$rxnconPath)) {
+  stop("Please provide path to the rxncon scripts directory with --rxnconPath")
+}
+
+minQuality <- opt$minQuality
+if (opt$minQuality < 0) {
+  stop("minQuality must be >= 0")
+}
+
+maxrounds <- opt$maxrounds
+if (opt$maxrounds < 2) {
+  stop("maxrounds must be >= 2")
+}
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -105,31 +128,9 @@ suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
 suppressMessages(source(paste0(kboolnetPath, "functions/unbindLigand.R")))
 suppressMessages(source(paste0(kboolnetPath, "functions/compMatrix.R")))
 
-# Parse modules option to a list
+# Parse modules and ligands options to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
-
-# Same for ligands option
-if (is.na(opt$ligands)) {
-  stop("Please provide ligand(s) to be toggled in simulation rounds")
-}
 ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
-
-# Make sure input file path was provided
-if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
-  stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
-} else if ((!is.na(opt$file)) & (!is.na(opt$driveFile))) { # If both files were provided
-  stop("Please provide only one path with EITHER --file or --driveFile")
-}
-
-minQuality <- opt$minQuality
-if (opt$minQuality < 0) {
-  stop("minQuality must be >= 0")
-}
-
-maxrounds <- opt$maxrounds
-if (opt$maxrounds < 2) {
-  stop("maxrounds must be >= 2")
-}
 
 ################ Load and process rxncon file ###################
 
