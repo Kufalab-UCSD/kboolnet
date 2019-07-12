@@ -290,7 +290,37 @@ scoreNoLigPlot <- plotCompMat(scoreNoLig)
 suppressMessages(ggsave(paste0(outPath, "lig/simulation_comparison.pdf"), device="pdf", plot=scoreLigPlot))
 suppressMessages(ggsave(paste0(outPath, "nolig/simulation_comparison.pdf"), device="pdf", plot=scoreNoLigPlot))
 
+# Create ordering for plots based on first simulation results
+orderSimPath <- cbind(ligAttr[[1]], 1:nrow(ligAttr[[1]]))
+for(i in (ncol(orderSimPath)-1):1){
+  orderSimPath <- orderSimPath[order(orderSimPath[,i], decreasing = T), ]
+}
+
+# Move ligands to first position of order
+for (i in length(ligands)) {
+  # Find row numbers of unbound forms of ligand
+  inds <- grep(paste0(ligands[1], "_.*--0$"), rownames(orderSimPath))
+  origInds <- inds
+
+  # Move each of those rows to the beginning of the order (unless they're already at the front)
+  for (j in length(origInds)) {
+    if (origInds[j] > j) {
+      orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
+      inds <- grep(paste0(ligands[1], "_.*--0$"), rownames(orderSimPath))
+    }
+  }
+}
+
+# Save order
+plotOrder <- orderSimPath[,ncol(orderSimPath)]
+
 for (i in 1:rounds) {
+  # Reorder the paths
+  ligPath[[i]] <- ligPath[[i]][plotOrder,]
+  ligAttr[[i]] <- ligAttr[[i]][plotOrder,]
+  noLigPath[[i]] <- noLigPath[[i]][plotOrder,]
+  noLigAttr[[i]] <- noLigAttr[[i]][plotOrder,]
+
   # Plot ligand paths/attractors
   plotPath(path = ligPath[[i]], filePath = paste0(outPath, "lig/path/" , i, ".pdf"))
   plotPath(path = ligAttr[[i]], filePath = paste0(outPath, "lig/attractor/", i, ".pdf"))
