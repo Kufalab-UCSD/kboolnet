@@ -37,7 +37,6 @@ extractModules <- function(inPath, outPath, modules = character(0), minQuality =
   
   # Filter by modules present in modules argument (only if modules provided)
   if(length(modules) > 0) {
-    print("doot")
     # Find which rows are in selected modules
     for (i in 1:nrow(rxnFiltered)) {
       rxnFiltered$hasModule[i] <- any(modules %in% trimws(strsplit(rxnFiltered$module[i], ",")[[1]]))

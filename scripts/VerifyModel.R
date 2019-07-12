@@ -83,21 +83,40 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20, kboolnetPath=NA, rxnconPath=NA)
+default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
-# Make sure necessary parameters were passed
+# Create out dir if it does not exist
+if (!dir.exists(opt$out)) {
+  dir.create(opt$out)
+}
+
+# Normalize paths
+outPath       <- paste0(normalizePath(opt$out), "/")
+kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
+rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
+
+# Load functions
+suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
+suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
+suppressMessages(source(paste0(kboolnetPath, "functions/unbindLigand.R")))
+suppressMessages(source(paste0(kboolnetPath, "functions/compMatrix.R")))
+
+# Parse modules option to a list
+modules <- trimws(strsplit(opt$modules, ",")[[1]])
+
+# Same for ligands option
+if (is.na(opt$ligands)) {
+  stop("Please provide ligand(s) to be toggled in simulation rounds")
+}
+ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
+
+# Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
   stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
 } else if ((!is.na(opt$file)) & (!is.na(opt$driveFile))) { # If both files were provided
   stop("Please provide only one path with EITHER --file or --driveFile")
-} else if (is.na(opt$kboolnetPath)) {
-  stop("Please provide path to the kboolnet repository with --kboolnetPath")
-} else if (is.na(opt$ligands)) {
-  stop("Please provide ligand(s) to be toggled in simulation rounds with --ligands")
-} else if (is.na(opt$rxnconPath)) {
-  stop("Please provide path to the rxncon scripts directory with --rxnconPath")
 }
 
 minQuality <- opt$minQuality
@@ -109,28 +128,6 @@ maxrounds <- opt$maxrounds
 if (opt$maxrounds < 2) {
   stop("maxrounds must be >= 2")
 }
-
-# Create out dir if it does not exist
-if (!dir.exists(opt$out)) {
-  dir.create(opt$out)
-}
-
-# Normalize paths
-outPath       <- paste0(normalizePath(opt$out), "/")
-kboolnetPath  <- tryCatch(paste0(normalizePath(opt$kboolnetPath), "/"),
-                          warning=function(w) if (grepl("No such file or directory", w)) stop("Please set the kboolnetPath parameter to a valid directory"))
-rxnconPath    <- tryCatch(paste0(normalizePath(opt$rxnconPath), "/"),
-                          warning=function(w) if (grepl("No such file or directory", w)) stop("Please set the rxnconPath parameter to a valid directory"))
-
-# Load functions
-suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/unbindLigand.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/compMatrix.R")))
-
-# Parse modules and ligands options to a list
-modules <- trimws(strsplit(opt$modules, ",")[[1]])
-ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
 
 ################ Load and process rxncon file ###################
 
@@ -146,22 +143,17 @@ if (!(is.na(opt$driveFile))) {
     gDriveID <- as_id(tryCatch({
       drive_get(id = as_id(opt$driveFile))$id[1]
     }, error = function(e) {
-      # If access fails, ask user if they want to try again with authentication
+      # If access fails, try again with authentication enabled
       repeat {
-        i <- readline(prompt = "Public Google Drive file not found. Try again with authentication? (y)es/(n)o: ")
+        cat("Public Google Drive file not found. Trying again with authentication...", "\n")
+        drive_auth_config(active = TRUE) # Activate authentication
         
-        if (grepl("^(?:yes|y)$", i, ignore.case = TRUE)) {
-          drive_auth_config(active = TRUE) # Activate authentication
+        return(tryCatch({ # Try to find file again
+          drive_get(id = as_id(opt$driveFile))$id[1]
           
-          return(tryCatch({ # Try to find file again
-            drive_get(id = as_id(opt$driveFile))$id[1]
-            
-          }, error = function(e){ # If it fails again
-            stop("Google Drive file not found. Either the file does not exist or you do not have permission to view it.")
-          }))
-        } else if (grepl("^(?:no|n)$", i, ignore.case = TRUE)){
-          stop("Please provide an input file for rxncon.")
-        }
+        }, error = function(e){ # If it fails again
+          stop("Google Drive file not found. Either the file does not exist or you do not have permission to view it.")
+        }))
       }
     }))
   } else { # Search for the file in Drive if name provided
