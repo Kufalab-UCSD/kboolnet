@@ -16,7 +16,6 @@ boolnet="$(cat $2)"
 # Apply regexes
 for exp in "${regexes[@]}"
 do
-    echo $exp
     boolnet="$(echo $boolnet | sed $exp)"
 done
 
