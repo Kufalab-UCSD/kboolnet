@@ -210,7 +210,7 @@ initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
 
 # Make sure ligands being toggled actually exists in the system
-for (i in ligands) {
+for (i in length(ligands)) {
   if (!(any(grepl(paste0(ligands[i], "_.*--(0|{0})$"), initStates$name)))) {
     stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
   } 
