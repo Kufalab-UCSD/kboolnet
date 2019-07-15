@@ -209,6 +209,13 @@ initStates <- read.csv(paste0(netFilePrefix, '_initial_vals.csv'), col.names=c("
 initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
 
+# Make sure ligands being toggled actually exists in the system
+for (i in ligands) {
+  if (!(any(grepl(paste0(ligands[i], "_.*--(0|{0})$"), initStates$name)))) {
+    stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
+  } 
+}
+
 ####################### Simulate #########################
 # Lists to store simulation results
 ligAttr   <- list()
@@ -238,9 +245,10 @@ for (i in 1:maxrounds) {
   noLigAttr[[i]]    <- getPathToAttractor(network, initStates$state) %>% t()
   rownames(noLigAttr[[i]]) <- initStates$name
   
-  # Add ligands
+  # Add ligands in fully neutral state
   for (lig in 1:length(ligands)){
     initStates$state[grepl(paste0(ligands[lig], "_.*--0$"), initStates$name)] <- 1
+    initStates$state[grepl(paste0(ligands[lig], "_.*--{0}$"), initStates$name)] <- 1
   }
   
   # Simulate w/ ligand
