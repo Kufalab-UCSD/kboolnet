@@ -165,3 +165,6 @@ dmypy.json
 
 # ghostwriter files
 *.backup
+
+# vscode
+.vscode/
