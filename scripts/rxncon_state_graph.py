@@ -64,7 +64,7 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
         output = os.path.splitext(os.path.basename(excel_filename))[0]
 
     base_path = os.path.dirname(excel_filename)
-    suffix = '_reg'
+    suffix = '_state_graph'
     if not output.endswith('.xgmml'):
         output =  '{0}{1}.xgmml'.format(output,suffix)
     else:
@@ -93,7 +93,86 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
     nodes = graph.nodes()
     edges = graph.edges()
 
-    bool_nodes = [node[0] for node in nodes.data('type') if node[1] == 'boolean_and' or node[1] == 'boolean_or' or node[1] == 'boolean_not']
+    # boolean NOT nodes
+
+    bool_not_nodes = [node[0] for node in nodes.data('type') if node[1] == 'boolean_not']
+    for node in bool_not_nodes:
+        interactions = nx.get_edge_attributes(graph, 'interaction')
+        #store targets and sources for current boolean_not node 
+        targets = []
+        sources = []
+        [targets.append(target) for target in list(nx.neighbors(graph, node))]          #neighbors(G, n) returns an iterator object of the outgoing neighbors (targets
+        [sources.append(target) for target in list(nx.all_neighbors(graph, node))]      #all_neighbors(G, n) returns an iterator object of all neighbors
+        for target in targets:
+            sources.remove(target)
+        #remove edges between sources and current node 
+        for source in sources:
+            graph.remove_edge(source, node)
+            #make edge between source and target, according to combination of source -> node and node -> target interactions
+            for target in targets:
+                source_interaction = interactions[(source, node)]
+                target_interaction = interactions[(node, target)]
+                if target_interaction == '!':
+                    graph.add_edge(source, target, interaction='-')
+                elif target_interaction == 'x':
+                    graph.add_edge(source, target, interaction='+')
+                elif target_interaction == 'AND':
+                    graph.add_edge(source, target, interaction='-')
+                elif target_interaction == 'OR':
+                    graph.add_edge(source, target, interaction='-')
+                elif target_interaction == 'NOT':
+                    graph.add_edge(source, target, interaction='+')
+                else:
+                    print('ERROR: target interaction (' + target_interaction + ') not represented in BOOLEAN_NOT section of PART 1 of script')
+        #remove edges between current node and targets
+        for target in targets:
+            graph.remove_edge(node, target)
+        #eliminate boolean_not node
+        graph.remove_node(node)
+
+
+
+
+    # boolean OR nodes
+
+    bool_or_nodes = [node[0] for node in nodes.data('type') if node[1] == 'boolean_or']
+    for node in bool_or_nodes:
+        interactions = nx.get_edge_attributes(graph, 'interaction')
+        #redirect edges
+        targets = []
+        sources = []
+        [targets.append(target) for target in list(nx.neighbors(graph, node))]          #neighbors(G, n) returns an iterator object of the outgoing neighbors (targets
+        [sources.append(target) for target in list(nx.all_neighbors(graph, node))]      #all_neighbors(G, n) returns an iterator object of all neighbors
+        for target in targets:
+            sources.remove(target)
+        for source in sources:
+            graph.remove_edge(source, node)
+            for target in targets:
+                source_interaction = interactions[(source, node)]
+                target_interaction = interactions[(node, target)]
+                if target_interaction == '!':
+                    graph.add_edge(source, target, interaction='%')
+                elif target_interaction == 'x':
+                    graph.add_edge(source, target, interaction='#')
+                elif target_interaction == '%':
+                    graph.add_edge(source, target, interaction=target_interaction)
+                elif target_interaction == '#':
+                    graph.add_edge(source, target, interaction=target_interaction)
+                elif target_interaction == 'AND':
+                    graph.add_edge(source, target, interaction=source_interaction)
+                else:
+                    graph.add_edge(source, target, interaction=target_interaction)
+        for target in targets:
+            graph.remove_edge(node, target)
+        #eliminate node
+        graph.remove_node(node)
+
+
+    # ORIGINAL PART 1
+    """
+    #node[1] == 'boolean_and' or node[1] == 'boolean_or'
+
+    bool_nodes = [node[0] for node in nodes.data('type') if node[1] == 'boolean_not']
     for node in bool_nodes:
         interactions = nx.get_edge_attributes(graph, 'interaction')
         #redirect edges
@@ -115,17 +194,27 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
             for target in targets:
                 source_interaction = interactions[(source, node)]
                 target_interaction = interactions[(node, target)]
-                if source_interaction == 'OR' or source_interaction == '%':
-                    graph.add_edge(source, target, interaction='%')
+                if source_interaction == 'OR':
+                    if target_interaction == '!':
+                        graph.add_edge(source, target, interaction='%')
+                    elif target_interaction == 'x':
+                        graph.add_edge(source, target, interaction='#')
+                    else:
+                        graph.add_edge(source, target, interaction=target_interaction)
                 elif source_interaction == 'NOT':
-                    graph.add_edge(source, target, interaction='x')
-                else:
-                    graph.add_edge(source, target, interaction=target_interaction)
+                    if target_interaction == '!':
+                        graph.add_edge(source, target, interaction='x')
+                    elif target_interaction == 'x':
+                        graph.add_edge(source, target, interaction='!')
+                elif source_interaction == '%' or source_interaction == '#':
+                    graph.add_edge(source, target, interaction=source_interaction)
+               # else: #boolean_and
+               #     graph.add_edge(source, target, interaction=target_interaction)
         for target in targets:
             graph.remove_edge(node, target)
         #eliminate node
         graph.remove_node(node)
-
+    """
  
     ## PART 2 OF IMPLEMENTATION - REMOVE REACTION NODES
     
@@ -147,13 +236,13 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
                 for target in targets:
                     source_interaction = interactions[(source, node)]
                     target_interaction = interactions[(node, target)]
-                    if (source_interaction == '!' or source_interaction == '%' or source_interaction == 'is') and target_interaction == 'produce':
+                    if (source_interaction == '!' or source_interaction == '%' or source_interaction == 'is' or source_interaction == 'ss') and (target_interaction == 'produce' or target_interaction == 'synthesis'):
                         graph.add_edge(source, target, interaction='+')
-                    elif (source_interaction == '!' or source_interaction == '%' or source_interaction == 'is') and target_interaction == 'consume':
+                    elif (source_interaction == '!' or source_interaction == '%' or source_interaction == 'is' or source_interaction == 'ss') and (target_interaction == 'consume' or target_interaction == 'degradation'):
                         graph.add_edge(source, target, interaction='-')
-                    elif source_interaction == 'x' and target_interaction == 'produce':
+                    elif (source_interaction == 'x' or source_interaction == '#') and (target_interaction == 'produce' or target_interaction == 'synthesis'):
                         graph.add_edge(source, target, interaction='-')
-                    elif source_interaction == 'x' and target_interaction == 'consume':
+                    elif (source_interaction == 'x' or source_interaction == '%') and (target_interaction == 'consume' or target_interaction == 'degradation'):
                         graph.add_edge(source, target, interaction='+')
                     else:
                         graph.add_edge(source, target, interaction=target_interaction)
@@ -169,9 +258,9 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
             graph.remove_edge(node, node)
     
 
-    #+/- edges for final state nodes
-    final_state_nodes = [node[0] for node in nodes.data('type') if node[1] == 'output']
-    for node in final_state_nodes:
+    #+/- edges for output nodes
+    output_nodes = [node[0] for node in nodes.data('type') if node[1] == 'output']
+    for node in output_nodes:
         interactions = nx.get_edge_attributes(graph, 'interaction')
         for source in list(nx.all_neighbors(graph, node)):
             source_interaction = interactions[(source, node)]
@@ -179,7 +268,6 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
                 graph.remove_edge(source, node)
                 graph.add_edge(source, node, interaction='+')
 
-    
     #PART 6 OF IMPLEMENTATION - NAME SIMPLIFICATIONS
     mapping = {}
     id_label = {}
