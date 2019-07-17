@@ -8,8 +8,9 @@ Various scripts for the rxncon/boolnet pipeline of the Kufareva lab.
 
 ### Check out the proper branch
 Branches:
+
 - `master`: Working version of the pipeline (currently a WIP)
-- `devel`: Main development branch, code changes should go here so they can be reviewed before merging into `master`.
+~~- `devel`: Main development branch, code changes should go here so they can be reviewed before merging into `master`.~~ For now, keep everything in `master`
 
 To check out a branch, run: `git checkout <branch>`
 
