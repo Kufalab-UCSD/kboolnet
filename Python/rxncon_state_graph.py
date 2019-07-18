@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import re
 
 import click
 import click_log
@@ -229,17 +230,12 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
 
     #PART 5 OF IMPLEMENTATION - NAME SIMPLIFICATIONS
 
-    #### this will be changed with python re (regular expression operations) to make this process more efficient
-
     mapping = {}
     id_label = {}
     for pair in nodes.data('type'):
         if pair[1] == 'state':
             id = pair[0]
-            while '_' in id:
-                start = id.find('_')
-                stop = id.find(']')
-                id = id[:start] + id[stop+1:]
+            id = re.sub(r'_\[.*?\]', '', id)
             mapping[pair[0]] = id
             id_label[id] = {'label': id}
     nx.relabel_nodes(graph, mapping, copy=False)
@@ -248,9 +244,6 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
     nx.set_node_attributes(graph, id_label)
    
 
-    ##
-
-    
     if layout_template_file:
         print('Writing layout information from [{0}] to graph file [{1}] ...'.format(layout_template_file, graph_filename))
         gml_system = XGMML(graph, "{}".format(output))
