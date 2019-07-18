@@ -10,6 +10,7 @@ import colorama
 
 from rxncon.input.excel_book.excel_book import ExcelBook
 from rxncon.visualization.regulatory_graph import RegulatoryGraph
+from rxncon.visualization.regulatory_graph import SpeciesReactionGraph
 from rxncon.visualization.graphML import XGMML
 from rxncon.visualization.graphML import map_layout2xgmml
 
@@ -47,7 +48,7 @@ def _file_path_existence(file_path):
         raise NotADirectoryError("Path {0} does not exists.".format(path))
 
 
-def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
+def write_xgmml(excel_filename: str, output=None, layout_template_file=None, base='sr'):
     """
     creating the xgmml file from an excel input and writing it into a new file.
 
@@ -55,6 +56,7 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
         excel_filename: Name of the excel input file.
         output: Name of the new output.
         layout_template_file: Name of the layout template file.
+        base: Type of graph to use as the base when making the state graph.
 
     Returns:
         None
@@ -84,9 +86,17 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
     print('Constructed rxncon system: [{} reactions], [{} contingencies]'
           .format(len(rxncon_system.reactions), len(rxncon_system.contingencies)))
 
-    print('Generating regulatory graph output...')
-    reg_system = RegulatoryGraph(rxncon_system)
-    graph = reg_system.to_graph()
+    base = base.lower()
+    if base == 'reg' or base == 'regulatory':
+        print('Generating regulatory graph...')
+        reg_system = RegulatoryGraph(rxncon_system)
+        graph = reg_system.to_graph()
+    elif base == 'sr' or base == 'speciesreaction':
+        print('Generating elemental species-reaction graph...')
+        reg_system = SpeciesReactionGraph(rxncon_system)
+        graph = reg_system.to_graph()
+    else:
+        raise ValueError('Base argument must be either \'sr\' or \'reg\'')
 
     
     ##
@@ -245,12 +255,12 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
         print('Writing layout information from [{0}] to graph file [{1}] ...'.format(layout_template_file, graph_filename))
         gml_system = XGMML(graph, "{}".format(output))
         graph = map_layout2xgmml(gml_system.to_string(), layout_template_file)
-        print('Writing regulatory graph file [{}] ...'.format(graph_filename))
+        print('Writing state graph file [{}] ...'.format(graph_filename))
 
         with open(graph_filename, "w") as graph_handle:
             graph_handle.write(graph)
     else:
-        print('Writing regulatory graph file [{}] ...'.format(graph_filename))
+        print('Writing state graph file [{}] ...'.format(graph_filename))
         gml_system = XGMML(graph, "{}".format(output))
         gml_system.to_file(graph_filename)
     
@@ -260,11 +270,13 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None):
               help='Base name for output files. Default: \'fn\' for input file \'fn.xls\'')
 @click.option('--layout', default=None, nargs=1, type=click.Path(exists=True),
               help='xgmml file containing layout information, which should be transferred to the new file.')
+@click.option('--base', default='sr',
+              help='Type of graph (reg or sr) to use as a base from which to generate state graph. Default: sr')
 @click.argument('excel_file')
 @click_log.simple_verbosity_option(default='WARNING')
 @click_log.init()
-def run(output, excel_file, layout):
-    write_xgmml(excel_file, output, layout)
+def run(output, excel_file, layout, base):
+    write_xgmml(excel_file, output, layout, base)
 
 
 def setup_logging_colors():
