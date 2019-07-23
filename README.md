@@ -16,10 +16,13 @@ To check out a branch, run: `git checkout <branch>`
 
 ### Install dependencies
 
-Dependencies: `BoolNet`, `ggplot2`, `dplyr`, `openxlsx`, `googledrive`, `optparse`, `tidyr`, `CellNOptR`, `plyr`
+R dependencies: `BoolNet`, `ggplot2`, `dplyr`, `openxlsx`, `googledrive`, `optparse`, `tidyr`, `CellNOptR`, `plyr`
 
-To install these dependencies, run: `install.packages(pkgs=c("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr"), dependencies=TRUE)`
+To install these dependencies, enter an R environment run: `install.packages(pkgs=c("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr"), dependencies=TRUE)`
 
+Python dependencies: `rxncon`, `openpyxl`
+
+To install these dependencies, run: `pip install rxncon openpyxl`
 
 ## Contributing
 A small intro to git that should be enough to get you up and running with the repository.
@@ -122,3 +125,42 @@ See `examples/VerifyModelConfig.R` for an example.
 - `lig/`, `nolig/`: Output directories for simulations with and without ligand present, respectively
 	- `simulation_comparison.csv`, `simulation_comparison.pdf`: Comparison matrix between each round of simulation (and associated plot)
 	- `attractor/`, `path/`: Path and attractor data for each round of simulation
+
+### extract_modules.py
+
+`extract_modules.py` is a standalone script that will extract reactions and contingencies from a `rxncon` Excel file based on their Quality and Module tags. This script automatically adds any reactions necessary for the request module to compile into a valid `rxncon` system
+
+#### Running
+
+```
+Usage: extract_modules.py [OPTIONS]
+
+Options:
+  --file TEXT          Name of input file.  [required]
+  --output TEXT        Name of output file. Default: modules.xlsx
+  --modules TEXT       Comma-separated list of modules to be extracted from
+                       input file.
+  --quality INTEGER    Minimum quality of rules to be kept. Default: 0
+  -v, --verbosity LVL  Either CRITICAL, ERROR, WARNING, INFO or DEBUG
+  --help               Show this message and exit.
+```
+
+### rxncon2stategraph.py
+
+`rxncon2stategraph.py` generates a "state graph" to represent a rxncon system. This "state graph" is much simpler than the regulator graph and is intended to easily show the flow of information through the system (similar to a classic biologist's graph).
+
+#### Running
+
+```
+Usage: rxncon2stategraph.py [OPTIONS] EXCEL_FILE
+
+Options:
+  --output TEXT        Base name for output files. Default: 'fn' for input
+                       file 'fn.xls'
+  --layout PATH        xgmml file containing layout information, which should
+                       be transferred to the new file.
+  --base TEXT          Type of graph (reg or sr) to use as a base from which
+                       to generate state graph. Default: sr
+  -v, --verbosity LVL  Either CRITICAL, ERROR, WARNING, INFO or DEBUG
+  --help               Show this message and exit.
+```
