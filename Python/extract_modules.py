@@ -35,6 +35,9 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
         modules: Comma-separated list of modules to be extracted
         min_quality: Minimum quality for a line to be kept
     """
+    logger.debug("modules: {}".format(modules))
+    logger.debug("min quality: {}".format(min_quality))
+
     if not output:
         output = os.path.dirname(excel_filename) + 'modules.xlsx'
 
@@ -88,7 +91,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
             if row_quality < min_quality: # If less than minimum quality skip row
                 logger.debug('Skipping reaction row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
                 continue
-        elif modules == [] or not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
+        elif not modules == [] and not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
             logger.debug('Skipping reaction row {} (module not present)'.format(num))
             continue
         else:
@@ -110,7 +113,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
             if row_quality < min_quality: # If less than minimum quality skip row
                 logger.debug('Skipping contingency row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
                 continue
-        elif modules == [] or not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
+        elif not modules == [] and not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
             logger.debug('Skipping contingency row {} (module not present)'.format(num))
             continue
         else:
@@ -241,6 +244,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
 @click_log.init()
 def run(file, output, modules, quality):
     modules = list(map(str.strip, modules.split(','))) # Split modules into list and trim whitespace
+    modules = list(filter(None, modules)) # Filter out blank modules
     extract_modules(file, output, modules, quality)
 
 
