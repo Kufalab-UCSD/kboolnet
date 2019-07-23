@@ -98,10 +98,9 @@ kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
 rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
 
 # Load functions
-suppressMessages(source(paste0(kboolnetPath, "functions/extractModules.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/plotPath.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/unbindLigand.R")))
-suppressMessages(source(paste0(kboolnetPath, "functions/compMatrix.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/compMatrix.R")))
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
@@ -186,8 +185,9 @@ if (!(is.na(opt$driveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
-extractModules(inPath = masterFile, outPath = modulesFile, minQuality = minQuality, modules = modules)
-cat("Modules written to", modulesFile, "\n")
+command <- paste0("python3 ", kboolnetPath, "Python/extract_modules.py --file ", masterFile,
+                  " --modules \"", paste(modules, sep=","), "\" --quality ", minQuality)
+system(command)
 
 # Pass files to rxncon for processing
 command <- paste0("cd ", outPath, " && ",

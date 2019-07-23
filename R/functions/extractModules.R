@@ -1,3 +1,6 @@
+###################### DEPRECATED ####################
+# Use extract_modules.py instead
+
 ########################################################
 # extractModules.R
 # Adrian C
