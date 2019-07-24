@@ -45,8 +45,11 @@ plotPath <- function(path, filePath = "", ratio = 0.8) {
 
 args = commandArgs(trailingOnly = TRUE)
 
+output <- "./combined"
 if (length(args) < 2) {
   stop("Please provide two .csv files as arguments to this function.")
+} else if (length(args) > 2) {
+  output <- args[3]
 }
 
 ############## The Actual Code™ ###############
@@ -113,7 +116,7 @@ mat_combined_diff <- mat_combined_all[apply(mat_combined_all, 1, function(x) {
 
 ############### Plotting ################
 # Plot entire path
-plotPath(mat_combined_all, "combined_all.pdf")
+plotPath(mat_combined_all, paste0(output, "_all.pdf"))
   
 # Plot only different rows
-plotPath(mat_combined_diff, "combined_diff.pdf")
+plotPath(mat_combined_diff, paste0(output, "_diff.pdf"))
