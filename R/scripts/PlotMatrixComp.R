@@ -8,8 +8,11 @@
 # the differences between the two.
 ############################################
 
+#################### Library loading ################
+
 suppressMessages(library(ggplot2))
 library(tidyr)
+library(optparse)
 
 #################### Function definition ################
 
@@ -43,20 +46,22 @@ plotPath <- function(path, filePath = "", ratio = 0.8) {
 
 ############# Argument parsing and handling ############
 
-args = commandArgs(trailingOnly = TRUE)
+option_list = list(
+  make_option(c("-p", "--path"), action="store_true", default=FALSE,
+              help="Indicate that input files are paths, not attractors. This slightly changes how alignment is performed."),
+  make_option(c("-o", "--output"), action="store", default="./combined",
+              help="Base name for output files. [default %]")
+)
+usage <- "usage: %prog [options] FILE1 FILE2\n\n FILE1 and FILE2 are the .csv files to be compared"
+opt <- parse_args(OptionParser(usage=usage, option_list=option_list), positional_arguments = 2)
 
-output <- "./combined"
-if (length(args) < 2) {
-  stop("Please provide two .csv files as arguments to this function.")
-} else if (length(args) > 2) {
-  output <- args[3]
-}
+output <- opt$options$output
 
 ############## The Actual Code™ ###############
 
 # Read in the matrices
-mat1 <- read.csv(args[1], header = TRUE)
-mat2 <- read.csv(args[2], header = TRUE)
+mat1 <- read.csv(opt$args[1], header = TRUE)
+mat2 <- read.csv(opt$args[2], header = TRUE)
 
 # Set the first column as the row names
 rownames(mat1) <- mat1[,1]
@@ -67,50 +72,90 @@ mat2 <- mat2[,2:ncol(mat2)]
 if (any(rownames(mat1) != rownames(mat2))) {
   stop("Path matrices must be in same order.")
 }
+numRows <- nrow(mat1)
 
-mat1 <- as.matrix(mat1)
-mat2 <- as.matrix(mat2)
+mats <- list(as.matrix(mat1), as.matrix(mat2))
 
-# If there is a mismatch in number of columns, add empty columns to the shorter matrix
-if (ncol(mat1) < ncol(mat2)) {
-  mat1 <- cbind(mat1, matrix(nrow=nrow(mat1), ncol=ncol(mat2)-ncol(mat1)))
-} else if (ncol(mat2) < ncol(mat1)) {
-  mat2 <- cbind(mat2, matrix(nrow=nrow(mat2), ncol=ncol(mat1)-ncol(mat2)))
-}
+# # If there is a mismatch in number of columns, add empty columns to the shorter matrix
+# if (ncol(mat1) < ncol(mat2)) {
+#   mat1 <- cbind(mat1, matrix(nrow=nrow(mat1), ncol=ncol(mat2)-ncol(mat1)))
+# } else if (ncol(mat2) < ncol(mat1)) {
+#   mat2 <- cbind(mat2, matrix(nrow=nrow(mat2), ncol=ncol(mat1)-ncol(mat2)))
+# }
+# 
+# # Set NAs to equal 0
+# mat1[is.na(mat1)] <- 0
+# mat2[is.na(mat2)] <- 0
 
-# Set NAs to equal 0
-mat1[is.na(mat1)] <- 0
-mat2[is.na(mat2)] <- 0
+# Figure out which matrix is long and which one is short
+longMat <- which.max(lapply(mats, length))
+if (longMat == 1) shortMat = 2
+if (longMat == 2) shortMat = 1
 
 # Align and score the matrices
 scores <- numeric()
+shifts <- integer()
 orders <- list()
 orders[1] <- list(1:ncol(mat1))
-for (i in 1:ncol(mat1)) {
+for (i in 1:ncol(mats[[longMat]])) {
   # Create new ordering
   if (i != 1) {
-    orders[[i]] <- c((ncol(mat1) - (i - 2)):ncol(mat1), 1:(ncol(mat1) - (i - 1)))
+    orders[[i]] <- c((ncol(mats[[longMat]]) - (i - 2)):ncol(mats[[longMat]]), 1:(ncol(mats[[longMat]]) - (i - 1)))
   }
   
-  # Apply new ordering to matrix 2 and calculate the similarity (matching/total)
-  vec1 <- as.vector(mat1)
-  vec2 <- as.vector(mat2[,orders[[i]]])
-  scores[i] <- sum(vec1 == vec2, na.rm=T)/length(vec1)
+  # Apply new ordering to long matrix and convert to vector
+  longVec <- as.vector(mats[[longMat]][,orders[[i]]])
+  
+  # Calculate scores for all horizontal shifts for short matrix
+  shiftScores <- numeric()
+  for (j in 0:(ncol(mats[[longMat]] - ncol(mats[[shortMat]])))) {
+    tmp <- mats[[shortMat]]
+    # Add columns to the left of short matrix if necessary
+    if (j > 0) {
+      tmp <- cbind(matrix(nrow=numRows, ncol=j), tmp)
+    }
+    # Add columns to the right of short matrix if necessary
+    if (j < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) {
+      tmp <- cbind(tmp, matrix(nrow=numRows, ncol=((ncol(mats[[longMat]]) - ncol(mats[[shortMat]])) - j)))
+    }
+    
+    # Calculate score
+    shortVec <- as.vector(tmp)
+    shiftScores[j+1] <- sum(longVec == shortVec, na.rm=TRUE) / length(longVec)
+  }
+  
+  # Find highest scoring horizontal "shift" for short matrix and keep that score
+  shifts[i] <- which.max(shiftScores) - 1
+  scores[i] <- max(shiftScores)
   
   # If perfect score, we can stop there
   if (scores[i] == 1) break
+  
+  # If this is a path, only do this with original ordering
+  if (opt$options$path) break
 }
 
-# Apply highest-scoring order to mat2
-mat2 <- mat2[,orders[[which.max(scores)]]]
+# Apply highest-scoring order to long matrix
+bestOrder <- orders[[which.max(scores)]]
+mats[[longMat]] <- mats[[longMat]][,bestOrder]
+
+# Apply highest-scoring shift to short matrix
+bestShift <- shifts[which.max(scores)]
+tmp <- mats[[shortMat]]
+if (bestShift > 0) { # Add to right
+  tmp <- cbind(matrix(nrow=numRows, ncol=bestShift), tmp)
+}
+if (bestShift < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) { # Add to left
+  tmp <- cbind(tmp, matrix(nrow=numRows, ncol=((ncol(mats[[longMat]]) - ncol(mats[[shortMat]])) - bestShift)))
+}
 
 # Multiply mat2 by 2 and then add the matrices. As a result, values will be as follows:
 # mat1 and mat2 on: 3, only mat2 on: 2, only mat1 on: 1, neither on: 0
-mat_combined_all <- mat1 + (mat2 * 2)
+mat_combined_all <- mats[[1]] + (mats[[2]] * 2)
 
 # Get rows with not matching values
 mat_combined_diff <- mat_combined_all[apply(mat_combined_all, 1, function(x) {
-  any(sapply(x, function(y) y == 1 | y ==2))
+  any(sapply(x, function(y) y == 1 | y == 2))
 }),]
 
 
@@ -120,3 +165,4 @@ plotPath(mat_combined_all, paste0(output, "_all.pdf"))
   
 # Plot only different rows
 plotPath(mat_combined_diff, paste0(output, "_diff.pdf"))
+
