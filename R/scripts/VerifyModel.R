@@ -288,13 +288,15 @@ scoreNoLig <- scoreNoLig[1:rounds,1:rounds]
 
 ##################### Plot and save data ##############################
 cat("Simulations complete after", rounds, "rounds.", "\n")
-# Create output subdirs if they do not exist
-if (!dir.exists(paste0(outPath, "lig/"))) dir.create(paste0(outPath, "lig/"))
-if (!dir.exists(paste0(outPath, "lig/attractor/"))) dir.create(paste0(outPath, "lig/attractor/"))
-if (!dir.exists(paste0(outPath, "lig/path/"))) dir.create(paste0(outPath, "lig/path/"))
-if (!dir.exists(paste0(outPath, "nolig/"))) dir.create(paste0(outPath, "nolig/"))
-if (!dir.exists(paste0(outPath, "nolig/attractor/"))) dir.create(paste0(outPath, "nolig/attractor/"))
-if (!dir.exists(paste0(outPath, "nolig/path/"))) dir.create(paste0(outPath, "nolig/path/"))
+# Create output subdirs
+unlink(paste0(outPath, "lig"), recursive = TRUE)
+unlink(paste0(outPath, "nolig"), recursive = TRUE)
+dir.create(paste0(outPath, "lig/"))
+dir.create(paste0(outPath, "lig/attractor/"))
+dir.create(paste0(outPath, "lig/path/"))
+dir.create(paste0(outPath, "nolig/"))
+dir.create(paste0(outPath, "nolig/attractor/"))
+dir.create(paste0(outPath, "nolig/path/"))
 
 # Write comparison data 
 write.csv(scoreLig, file = paste0(outPath, "lig/simulation_comparison.csv"))
