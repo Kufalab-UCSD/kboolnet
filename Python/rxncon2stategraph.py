@@ -116,7 +116,40 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
         targets = []
         sources = []
         [targets.append(target) for target in list(nx.neighbors(graph, node))]          #neighbors(G, n) returns an iterator object of the outgoing neighbors (targets)
-    
+        [sources.append(target) for target in list(nx.all_neighbors(graph, node))]      #all_neighbors(G, n) returns an iterator object of all neighbors
+        for target in targets:
+            sources.remove(target)
+        #remove edges between sources and current node
+        for source in sources:
+            graph.remove_edge(source, node)
+            source_interaction = interactions[(source, node)]
+            #make edge between source and target, according to combination of source -> node and node -> target interactions
+            for target in targets:
+                target_interaction = interactions[(node, target)]
+                if source_interaction == 'NOT' or source_interaction == '-':
+                    if target_interaction == '!':
+                        graph.add_edge(source, target, interaction='-')
+                    elif target_interaction == 'x':
+                        graph.add_edge(source, target, interaction='+')
+                    else: # target_interaction == 'AND' or 'OR':
+                        graph.add_edge(source, target, interaction='-')
+                elif source_interaction == '+':
+                    if target_interaction == '!':
+                        graph.add_edge(source, target, interaction='+')
+                    elif target_interaction == 'x':
+                        graph.add_edge(source, target, interaction='-')
+                    else: # target_interaction == 'AND' or 'OR:
+                        graph.add_edge(source, target, interaction='+')
+                else:
+                    print('ERROR: target interaction (' + target_interaction + ') not represented in BOOLEAN_NOT section of PART 1 of script')
+        for target in targets:
+            graph.remove_edge(node, target)
+        #eliminate boolean_or node
+        graph.remove_node(node)
+
+
+
+
     # boolean_OR nodes
 
     #list of names of boolean_or nodes
@@ -158,7 +191,7 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
         #eliminate boolean_or node
         graph.remove_node(node)
    
- 
+    
 
     ## PART 2 OF IMPLEMENTATION - REMOVE REACTION NODES
 
@@ -228,8 +261,17 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
 
 
 
-    #PART 5 OF IMPLEMENTATION - NAME SIMPLIFICATIONS
+    #PART 5 OF IMPLEMENTATION - COLLAPSE MUTUALLY EXCLUSIVE STATES
+    
+    
+    '''
+    currently a work in progress :)
+    will add whatever i get finished before i leave next week
+	'''
 
+
+
+    #PART 6 OF IMPLEMENTATION - NAME SIMPLIFICATIONS
     mapping = {}
     id_label = {}
     for pair in nodes.data('type'):
@@ -243,6 +285,7 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
     #make label same as id
     nx.set_node_attributes(graph, id_label)
    
+
 
     if layout_template_file:
         print('Writing layout information from [{0}] to graph file [{1}] ...'.format(layout_template_file, graph_filename))
@@ -312,5 +355,6 @@ if __name__ == '__main__':
         run()
     except Exception as e:
         print('ERROR: {}\n{}\nPlease re-run this command with the \'-v DEBUG\' option.'.format(type(e), e))
+
 
         
