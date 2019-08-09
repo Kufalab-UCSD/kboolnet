@@ -26,10 +26,12 @@ plotPath <- function(path, filePath = "", ratio = 0.8) {
   pathGather          <- gather(path, "t", "value", 1:path_length)
   pathGather$symbols  <- factor(pathGather$symbols, levels = rownames(path)[nrow(path):1])
   pathGather$t        <- factor(pathGather$t)
+  pathGather$value    <- factor(pathGather$value, levels = c("0", "1", "2", "3", "4"))
   
   # Plot first simulation
   compColors <- c("0" = "white", "1" = "red", "2" = "steelblue", "3" = "purple", "4" = "lightgrey")
-  p         <- ggplot(pathGather, aes(t, symbols)) + geom_tile(aes(fill = factor(value)), colour = "white") + scale_fill_manual(values = compColors, labels =c("Neither", "1", "2", "1+2", "NA") )
+  p         <- ggplot(pathGather, aes(t, symbols)) + geom_tile(aes(fill = value), colour = "white") +
+                      scale_fill_manual(values = compColors, labels=c("Neither", "1", "2", "1+2", "NA"), drop=FALSE)
   base_size <- 8
   ratio <- 0.8
   p         <- p + theme_grey(base_size = base_size) + labs(x = "", y = "") + scale_x_discrete(expand = c(0, 0)) + scale_y_discrete(expand = c(0, 0)) +
@@ -70,7 +72,7 @@ rownames(mat2) <- mat2[,1]
 mat2 <- mat2[,2:ncol(mat2)]
 
 if (any(rownames(mat1) != rownames(mat2))) {
-  stop("Path matrices must be in same order.")
+  stop("Path matrices must be in same order and have same number of rows.")
 }
 numRows <- nrow(mat1)
 
@@ -108,7 +110,7 @@ for (i in 1:ncol(mats[[longMat]])) {
   
   # Calculate scores for all horizontal shifts for short matrix
   shiftScores <- numeric()
-  for (j in 0:(ncol(mats[[longMat]] - ncol(mats[[shortMat]])))) {
+  for (j in 0:(ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) {
     tmp <- mats[[shortMat]]
     # Add columns to the left of short matrix if necessary
     if (j > 0) {
@@ -148,6 +150,8 @@ if (bestShift > 0) { # Add to right
 if (bestShift < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) { # Add to left
   tmp <- cbind(tmp, matrix(nrow=numRows, ncol=((ncol(mats[[longMat]]) - ncol(mats[[shortMat]])) - bestShift)))
 }
+tmp[is.na(tmp)] <- 0
+mats[[shortMat]] <- tmp
 
 # Multiply mat2 by 2 and then add the matrices. As a result, values will be as follows:
 # mat1 and mat2 on: 3, only mat2 on: 2, only mat1 on: 1, neither on: 0
@@ -165,4 +169,3 @@ plotPath(mat_combined_all, paste0(output, "_all.pdf"))
   
 # Plot only different rows
 plotPath(mat_combined_diff, paste0(output, "_diff.pdf"))
-
