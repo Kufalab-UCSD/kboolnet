@@ -17,6 +17,16 @@
 ####################################################
 
 unbindLigand <- function(ligand, names, states) {
+  # If ligand isnt a component, throw an error
+  if (grepl("_", ligand)) {
+    stop("Ligand ", ligand, " is not a component.")
+  }
+  
+  # If ligand doesn't exist in names, throw an error
+  if (any(grepl(paste0(ligand, "_"), name))) {
+    stop("Ligand ", ligand, " does not exist in network.")
+  }
+
   # Get all rxncon nodes that contain the ligand and are active
   ligandNodes   <- names[grepl(paste0(ligand, "_"), names) & states == 1]
   
