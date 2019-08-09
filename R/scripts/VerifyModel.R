@@ -251,6 +251,7 @@ for (i in 1:maxrounds) {
   rownames(noLigPath[[i]]) <- initStates$name
   initStates$state  <- noLigPath[[i]][,ncol(noLigPath[[i]])] # Get only attractor of no lig path
   noLigAttr[[i]]    <- getPathToAttractor(network, initStates$state) %>% t()
+  noLigAttr[[i]]      <- noLigAttr[[i]][,1:(ncol(noLigAttr[[i]])-1)]
   rownames(noLigAttr[[i]]) <- initStates$name
   
   # Add ligands in fully neutral state
@@ -264,6 +265,7 @@ for (i in 1:maxrounds) {
   rownames(ligPath[[i]]) <- initStates$name
   initStates$state  <- ligPath[[i]][,ncol(ligPath[[i]])] # Get only attractor of no lig path
   ligAttr[[i]]      <- getPathToAttractor(network, initStates$state) %>% t()
+  ligAttr[[i]]      <- ligAttr[[i]][,1:(ncol(ligAttr[[i]])-1)] # Remove last repeated column from attractor
   rownames(ligAttr[[i]]) <- initStates$name
   
   # Compare this round of simulation to previous rounds
