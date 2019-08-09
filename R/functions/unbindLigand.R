@@ -57,22 +57,22 @@ unbindLigand <- function(ligand, names, states) {
     return(y)
   })
   
-  # Get reactions that form/dissociate complexes
-  for(i in 1:length(complexNames)) {
-    # Get complex-forming reaction, tyring both component orderings
-    bindRxn <- names[grepl(paste0(ligandComplex$compA, ".*_.*\\+_", ligandComplex$compB), names)]
-    if (length(bindRxn) == 0) {
-      bindRxn <- names[grepl(paste0(ligandComplex$compB, ".*_.*\\+_", ligandComplex$compA), names)]
-    }
-    ligandComplex$bindRxn[i] <- bindRxn
-    
-    # Same for dissociation reaction
-    unbindRxn <- names[grepl(paste0(ligandComplex$compA, ".*_.*-_", ligandComplex$compB), names)]
-    if (length(unbindRxn) == 0) {
-      unbindRxn <- names[grepl(paste0(ligandComplex$compB, ".*_.*-_", ligandComplex$compA), names)]
-    }
-    ligandComplex$unbindRxn[i] <- unbindRxn
-  }
+  # # Get reactions that form/dissociate complexes
+  # for(i in 1:length(complexNames)) {
+  #   # Get complex-forming reaction, tyring both component orderings
+  #   bindRxn <- names[grepl(paste0(ligandComplex$compA, ".*_.*\\+_", ligandComplex$compB), names)]
+  #   if (length(bindRxn) == 0) {
+  #     bindRxn <- names[grepl(paste0(ligandComplex$compB, ".*_.*\\+_", ligandComplex$compA), names)]
+  #   }
+  #   ligandComplex$bindRxn[i] <- bindRxn
+  #   
+  #   # Same for dissociation reaction
+  #   unbindRxn <- names[grepl(paste0(ligandComplex$compA, ".*_.*-_", ligandComplex$compB), names)]
+  #   if (length(unbindRxn) == 0) {
+  #     unbindRxn <- names[grepl(paste0(ligandComplex$compB, ".*_.*-_", ligandComplex$compA), names)]
+  #   }
+  #   ligandComplex$unbindRxn[i] <- unbindRxn
+  # }
   
   # Reconstruct unbound forms of non-ligand components
   ligandComplex[ligandComplex$compA == ligand] <- ligandComplex[ligandComplex$compA == ligand] %>%
@@ -81,9 +81,9 @@ unbindLigand <- function(ligand, names, states) {
                                                   mutate(unbound = paste0(ligandComplex$compA, "_[", ligandComplex$compADomain, "]--0"))
   
   # Remove any reactions that could result in complex formation/dissociation
-  states[names %in% ligandComplex$bindRxn] <- 0
-  states[names %in% ligandComplex$unbindRxn] <- 0
-  
+  # states[names %in% ligandComplex$bindRxn] <- 0
+  # states[names %in% ligandComplex$unbindRxn] <- 0
+
   # Remove all ligand-containing complexes or reactions
   states[names %in% complexNames] <- 0
   
