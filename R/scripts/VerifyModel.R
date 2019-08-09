@@ -58,9 +58,11 @@ option_list = list(
   make_option("--out", action="store", default=NA, type="character",
               help="Folder to which output files will be written [default: ./out/]"),
   make_option("--ligands", action="store", default=NA, type="character",
-              help="Comma-separated rxncon name(s) of ligand node(s) to be toggled in verification simulation"),
+              help="Comma-separated rxncon name(s) of ligand component(s) to be toggled in verification simulation"),
   make_option("--rounds", action="store", default=NA, type="integer",
-              help="Maximum number of ligand/no-ligand simulation pairs that should be run (default: 20)")
+              help="Maximum number of ligand/no-ligand simulation pairs that should be run (default: 20)"),
+  make_option("--inhib", action="store", default=NA, type="character",
+              help="Comma-separated rxncon name(s) of node(s)/component(s) to be inhibited in verification simulation")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 opt <- opt[!is.na(opt)] # Discard NA values
@@ -83,7 +85,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20)
+default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20, inhib="")
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
@@ -110,6 +112,9 @@ if (is.na(opt$ligands)) {
   stop("Please provide ligand(s) to be toggled in simulation rounds")
 }
 ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
+
+# Same for inhibitors
+inhib <- trimws(strsplit(opt$inhib, ",")[[1]])
 
 # Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
@@ -217,31 +222,54 @@ initStates <- read.csv(paste0(netFilePrefix, '_initial_vals.csv'), col.names=c("
 initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
 
-# Create a BoolNet network in which the ligands have been turned off
-noLigNet <- network
-for (i in length(ligands)) {
-  # Make sure the ligand exists in a neutral state
-  if (!(any(grepl(paste0(ligands[i], "_.*-(-0|\\{0\\})$"), initStates$name)))) {
-    stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
-  } 
-  
-  # Toggle off all the component nodes for the ligand
-  # Make a regex matching unbound, complexed, and modified forms of ligand
-  ligRegex <- paste0("(", c(paste0(ligands[i], "_.*--.*"), paste0(".*--", ligands[i], "_.*"),
-                            paste0("^", ligands[i], "$"), paste0(ligands[i], "_.*-\\{.*\\}")), ")", collapse="|")
-  ligNodes <- symbolMapping$ID[grepl(ligRegex, symbolMapping$name)]
-  
-  # Fix ligand-containing nodes off
-  noLigNet <- fixGenes(noLigNet, ligNodes, 0)
+# Create a BoolNet network in which nodes have been inhibited
+if (length(inhib) > 0) {
+  inhibNodes <- character()
+  inhibNodesNames <- character()
+  for (i in length(inhib)) {
+    # Make sure the inhibited nodes/components exist
+    if (!(any(grepl(paste0("^", inhib[i], "(_.*--0|_.*-\\{0\\}|)$"), initStates$name)))) {
+      stop("No neutral state found for inhibited node/component ", inhib[i], ". Please verify that ", inhib[i], " is a valid node/component in the rxncon system.")
+    } 
+    
+    # Find which nodes the inhibition corresponds to
+    inhibRegex <- paste0("(", c(paste0(inhib[i], "_.*--.*"), paste0(".*--", inhib[i], "_.*"),
+                              paste0("^", inhib[i], "$"), paste0(inhib[i], "_.*-\\{.*\\}")), ")", collapse="|")
+    inhibMatch <- grepl(inhibRegex, symbolMapping$name)
+    inhibNodes <- c(inhibNodes, symbolMapping$ID[inhibMatch])
+    inhibNodesNames <- c(inhibNodesNames, symbolMapping$name[inhibMatch])
+    
+    cat("Inhibitor", inhib[i], "matched to node(s)", paste0(symbolMapping$name[inhibMatch], collapse=", "), "\n")
+  }
+  # Fix inhib nodes off
+  network <- fixGenes(network, inhibNodes, 0)
 }
 
+# Find the nodes that the ligands correspond to
+ligNodes <- character()
+ligNodesNames <- character()
+for (i in length(ligands)) {
+  # Make sure the ligand exists in a neutral state
+  if (!(any(grepl(paste0("^", ligands[i], "(_.*--0|_.*-\\{0\\})$"), initStates$name)))) {
+    stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
+  } 
+
+  # Make a regex matching unbound, and modified forms of ligand
+  ligRegex <- paste0("(", c(paste0(ligands[i], "_.*--0"), paste0("^", ligands[i], "$"),
+                            paste0(ligands[i], "_.*-\\{.*\\}")), ")", collapse="|")
+  ligMatch <- grepl(ligRegex, symbolMapping$name)
+  ligNodes <- c(ligNodes, symbolMapping$ID[ligMatch])
+  ligNodesNames <- c(ligNodesNames, symbolMapping$name[ligMatch])
+  
+  cat("Ligand", ligands[i], "matched to node(s)", paste0(symbolMapping$name[ligMatch], collapse=", "), "\n")
+}
 
 ####################### Simulate #########################
 # Lists to store simulation results
-ligAttr   <- list()
-ligPath   <- list()
 noLigAttr <- list()
 noLigPath <- list()
+ligAttr   <- list()
+ligPath   <- list()
 
 # Matrices to store comparison results
 scoreLig   <- matrix(nrow = maxrounds, ncol = maxrounds)
@@ -253,20 +281,20 @@ rounds <- 0
 for (i in 1:maxrounds) {
   rounds <- rounds + 1
   
-  # Unbind ligands from complexes and remove and ligand present
+  # Unbind ligands from complexes and remove any ligand
   for (lig in 1:length(ligands)){
     initStates$state <- unbindLigand(ligands[lig], initStates$name, initStates$state)
     ligRegex <- paste0("(", c(paste0(ligands[lig], "_.*--.*"), paste0(".*--", ligands[lig], "_.*"),
                               paste0("^", ligands[lig], "$"), paste0(ligands[lig], "_.*-\\{.*\\}")), ")", collapse="|")
-    initStates$state[grepl(ligRegex, initStates$name)] <- 0
+    initStates$state[initStates$name %in% ligNodesNames] <- 0
   }
   
   # Simulate w/out ligand
-  noLigPath[[i]]    <- getPathToAttractor(noLigNet, initStates$state) %>% t()
+  noLigPath[[i]]    <- getPathToAttractor(network, initStates$state) %>% t()
   rownames(noLigPath[[i]]) <- initStates$name
   initStates$state  <- noLigPath[[i]][,ncol(noLigPath[[i]])] # Get only attractor of no lig path
-  noLigAttr[[i]]    <- getPathToAttractor(noLigNet, initStates$state) %>% t()
-  noLigAttr[[i]]      <- noLigAttr[[i]][,1:(ncol(noLigAttr[[i]])-1)]
+  noLigAttr[[i]]    <- getPathToAttractor(network, initStates$state) %>% t()
+  noLigAttr[[i]]      <- noLigAttr[[i]][,1:(ncol(noLigAttr[[i]])-1), drop=FALSE]
   rownames(noLigAttr[[i]]) <- initStates$name
   
   # Add ligands in fully neutral state
@@ -280,7 +308,7 @@ for (i in 1:maxrounds) {
   rownames(ligPath[[i]]) <- initStates$name
   initStates$state  <- ligPath[[i]][,ncol(ligPath[[i]])] # Get only attractor of no lig path
   ligAttr[[i]]      <- getPathToAttractor(network, initStates$state) %>% t()
-  ligAttr[[i]]      <- ligAttr[[i]][,1:(ncol(ligAttr[[i]])-1)] # Remove last repeated column from attractor
+  ligAttr[[i]]      <- ligAttr[[i]][,1:(ncol(ligAttr[[i]])-1), drop=FALSE] # Remove last repeated column from attractor
   rownames(ligAttr[[i]]) <- initStates$name
   
   # Compare this round of simulation to previous rounds
@@ -338,10 +366,11 @@ for (i in length(ligands)) {
   origInds <- inds
 
   # Move each of those rows to the beginning of the order (unless they're already at the front)
-  for (j in length(origInds)) {
+  for (j in 1:length(origInds)) {
     if (origInds[j] > j) {
       orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
       inds <- grep(paste0(ligands[1], "_.*--0$"), rownames(orderSimPath))
+      print(inds)
     }
   }
 }
