@@ -191,7 +191,7 @@ if (!(is.na(opt$driveFile))) {
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
 suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
-                                                                 "--modules", paste("", modules, sep=","), "--quality", minQuality,
+                                                                 "--modules", paste0(modules, collapse=","), "--quality", minQuality,
                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
