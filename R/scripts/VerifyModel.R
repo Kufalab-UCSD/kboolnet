@@ -370,7 +370,6 @@ for (i in length(ligands)) {
     if (origInds[j] > j) {
       orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
       inds <- grep(paste0(ligands[1], "_.*--0$"), rownames(orderSimPath))
-      print(inds)
     }
   }
 }
