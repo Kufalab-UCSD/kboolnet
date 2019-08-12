@@ -360,16 +360,16 @@ for(i in (ncol(orderSimPath)-1):1){
 }
 
 # Move ligands to first position of order
-for (i in length(ligands)) {
+for (i in 1:length(ligNodesNames)) {
   # Find row numbers of unbound forms of ligand
-  inds <- grep(paste0(ligands[1], "_.*--0$"), rownames(orderSimPath))
+  inds <- grep(ligNodesNames[i], rownames(orderSimPath), fixed=T)
   origInds <- inds
 
   # Move each of those rows to the beginning of the order (unless they're already at the front)
   for (j in 1:length(origInds)) {
     if (origInds[j] > j) {
       orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
-      inds <- grep(paste0(ligands[1], "_.*--0$"), rownames(orderSimPath))
+      inds <- grep(ligNodesNames[i], rownames(orderSimPath), fixed=T)
     }
   }
 }
