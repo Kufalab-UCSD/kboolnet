@@ -191,7 +191,7 @@ if (!(is.na(opt$driveFile))) {
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
 suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
-                                                                 "--modules", paste0(modules, collapse=","), "--quality", minQuality,
+                                                                 "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
@@ -226,7 +226,7 @@ initStates$name <- gsub(" ", "", initStates$name)
 if (length(inhib) > 0) {
   inhibNodes <- character()
   inhibNodesNames <- character()
-  for (i in length(inhib)) {
+  for (i in 1:length(inhib)) {
     # Make sure the inhibited nodes/components exist
     if (!(any(grepl(paste0("^", inhib[i], "(_.*--0|_.*-\\{0\\}|)$"), initStates$name)))) {
       stop("No neutral state found for inhibited node/component ", inhib[i], ". Please verify that ", inhib[i], " is a valid node/component in the rxncon system.")
@@ -248,7 +248,7 @@ if (length(inhib) > 0) {
 # Find the nodes that the ligands correspond to
 ligNodes <- character()
 ligNodesNames <- character()
-for (i in length(ligands)) {
+for (i in 1:length(ligands)) {
   # Make sure the ligand exists in a neutral state
   if (!(any(grepl(paste0("^", ligands[i], "(_.*--0|_.*-\\{0\\})$"), initStates$name)))) {
     stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
