@@ -67,16 +67,16 @@ mat2 <- read.csv(opt$args[2], header = TRUE)
 
 # Set the first column as the row names
 rownames(mat1) <- mat1[,1]
-mat1 <- mat1[,2:ncol(mat1)]
+mat1 <- mat1[,2:ncol(mat1), drop=F]
 rownames(mat2) <- mat2[,1]
-mat2 <- mat2[,2:ncol(mat2)]
+mat2 <- mat2[,2:ncol(mat2), drop=F]
 
 if (any(rownames(mat1) != rownames(mat2))) {
   stop("Path matrices must be in same order and have same number of rows.")
 }
 numRows <- nrow(mat1)
 
-mats <- list(as.matrix(mat1), as.matrix(mat2))
+mats <- list(as.matrix(mat1, nrow=nrow(mat1), ncol=ncol(mat1)), as.matrix(mat2, nrow=nrow(mat2), ncol=ncol(mat2)))
 
 # # If there is a mismatch in number of columns, add empty columns to the shorter matrix
 # if (ncol(mat1) < ncol(mat2)) {
@@ -139,7 +139,7 @@ for (i in 1:ncol(mats[[longMat]])) {
 
 # Apply highest-scoring order to long matrix
 bestOrder <- orders[[which.max(scores)]]
-mats[[longMat]] <- mats[[longMat]][,bestOrder]
+mats[[longMat]] <- mats[[longMat]][,bestOrder, drop=F]
 
 # Apply highest-scoring shift to short matrix
 bestShift <- shifts[which.max(scores)]
@@ -160,7 +160,7 @@ mat_combined_all <- mats[[1]] + (mats[[2]] * 2)
 # Get rows with not matching values
 mat_combined_diff <- mat_combined_all[apply(mat_combined_all, 1, function(x) {
   any(sapply(x, function(y) y == 1 | y == 2))
-}),]
+}),,drop=F]
 
 
 ############### Plotting ################
