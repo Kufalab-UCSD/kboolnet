@@ -42,24 +42,29 @@ readMIDASExcel <- function(MIDASfile) {
   treatmentDefs <- treatmentDefs[2:nrow(treatmentDefs), ,drop=F]
   
   # Replace aliases of treatment types with their correct names
-  treatmentDefs$type[grepl("^(Inhibitor|I|Inhib)", ignore.case = T)] <- "Inhibitor"
-  treatmentDefs$type[grepl("^(Stimulus|S|Stimulus)", ignore.case = T)] <- "Stimulus"
-  treatmentDefs$type[grepl("^(Knockout|Knockdown|KO)", ignore.case = T)] <- "KO"
+  treatmentDefs$type[grepl("^(Inhibitor|I|Inhib)", treatmentDefs$type, ignore.case = T)] <- "Inhibitor"
+  treatmentDefs$type[grepl("^(Stimulus|S|Stimulus)", treatmentDefs$type, ignore.case = T)] <- "Stimulus"
+  treatmentDefs$type[grepl("^(Knockout|Knockdown|KO)", treatmentDefs$type, ignore.case = T)] <- "KO"
   
   # Validation of treatment types
-  if (any(!grepl("(Inhibitor|Stimulus|KO", treatmentDefs$type))) {
+  if (any(!grepl("(Inhibitor|Stimulus|KO)", treatmentDefs$type))) {
     stop("Invalid treatment type detected in TreatmentDefs sheet")
   }
   
   ########### Experimental data sheet loading ################
   # Load all sheets (except for TreatmentDef)
-  sheetNames <- names(wb)[names(wb) != "TreatmentDef"]
+  sheetNames <- names(wb)[names(wb) != "TreatmentDefs"]
   sheets <- lapply(sheetNames, read.xlsx, xlsxFile = wb, colNames = F)
   
   # Extract sub-tables from all sheets
   tables <- list()
   for (i in 1:length(sheets)) {
     headerRows <- grep("TH", sheets[[i]][,1]) # Get row numbers of sub-tables' header rows in each sheet
+    
+    # If no TH present, throw error
+    if (length(headerRows) == 0) {
+      stop("Sheet ", sheetNames[i], " has no TH cells.")
+    }
     
     # If more than one TH row present, iterate through and get all the sub-tables
     if (length(headerRows) > 1) {
@@ -71,7 +76,7 @@ readMIDASExcel <- function(MIDASfile) {
     tables <- c(tables, list(sheets[[i]][(headerRows[length(headerRows)]+1):nrow(sheets[[i]]),])) # Do the same for the last sub-table
     names(tables)[length(tables)] <- strsplit(sheets[[i]][headerRows[length(headerRows)],1], ":")[[1]][2] # Set table name based on TH row
   }
-  cat("Found ", length(tables), " tables across ", length(sheets), " sheets.", "\n")
+  cat("Found", length(tables), "tables across", length(sheets), "sheets.", "\n")
   
   
   ################ Table cleanup/validation #################
@@ -120,8 +125,8 @@ readMIDASExcel <- function(MIDASfile) {
   # Strip all notes fields from TR and DA columns. This ensures correct table merging
   for (i in 1:length(tables)) {
     col <- grep("^(TR|DV):", names(tables[[i]])) # Get TR and DV column numbers
-    stripped <- sapply(strsplit(names(tables[[i]])[col]), function(x) paste0(x[1:2], collapse=":")) # Keep only name field
-    names(tables[[i]][col]) <- stripped
+    stripped <- sapply(strsplit(names(tables[[i]])[col], ":"), function(x) paste0(x[1:2], collapse=":")) # Keep only name field
+    names(tables[[i]])[col] <- stripped
   }
   
   # Merge all tables into a single table
@@ -144,57 +149,69 @@ readMIDASExcel <- function(MIDASfile) {
   DVcol <- grep("^DV", colnames(combined))
   DAcol <- grep("^DA", colnames(combined))
   
-  # Get TR columns' node, names, and type attributes 
-  TRheaders <- strsplit(colnames(combined)[TRcol], ":")
-  TRnodes <- character()
-  TRtypes <- character()
-  TRnames <- character()
-  for (i in 1:length(TRheaders)) {
-    TRnodes[i] <- TRheaders[[i]][2]
-    
-    # If TR doesn't have enough fields, throw an error
-    if (length(TRheaders[[i]]) < 3) {
-      stop(paste0("Treatment ", paste(TRheaders[[i]], sep="", collapse=":"), " is missing fields."))
-    }
-    
-    # If name field not provided or blank, set node field as name
-    if (length(TRheaders[[i]]) == 3) {
-      TRnames[i] <- TRheaders[[i]][2]
-    } else if (TRheaders[[i]][4] == "") {
-      TRnames[i] <- TRheaders[[i]][2]
-    } else {
-      TRnames[i] <- TRheaders[[i]][4]
-    }
-    
-    # If node field is blank, throw an error
-    if (TRheaders[[i]][2] == "") {
-      stop(paste0("Treatment ", paste(TRheaders[[i]], sep="", collapse=":"), " is missing the node field."))
-    }
-    
-    # Match treatment types
-    type <- tolower(TRheaders[[i]][3])
-    if (type == "inhibitor" | type == "i" | type == "inhib") {
-      TRtypes[i] <- "Inhibitor"
-    } else if (type == "stimulus" | type == "stim" | type == "s") {
-      TRtypes[i] <- "Stimulus"
-    } else if (type == "ko" | type == "knockout") {
-      TRtypes[i] <- "KO"
-    } else {
-      stop(paste0("\"", TRheaders[[i]][3], "\" is not a valid treatment type for treatment ", paste(TRheaders[[i]], sep="", collapse=":")))
+  # Get TR and DV names
+  TRnames <- sapply(strsplit(colnames(combined)[TRcol], ":"), "[[", 2)
+  DVnames <- sapply(strsplit(colnames(combined)[DVcol], ":"), "[[", 2)
+  
+  # Make sure TR names exist in TreatmentDefs
+  for (i in 1:length(TRnames)) {
+    if(!(TRnames[i] %in% treatmentDefs$name)) {
+      stop("Treatment ", TRnames[i], " does not exist in TreatmentDefs.")
     }
   }
   
-  # Get signal names
-  DVheaders <- strsplit(colnames(combined)[DVcol], ":")
-  namesSignals <- character()
-  # If name field not provided, set node field as name
-  for (i in 1:length(DVheaders)) {
-    if (length(DVheaders[[i]]) == 2) {
-      namesSignals[i] <- DVheaders[[i]][2]
-    } else {
-      namesSignals[i] <- DVheaders[[i]][3]
-    }
-  }
+  ### This code obsolete due to TreatmentDefs table
+  # # Get TR columns' node, names, and type attributes 
+  # TRheaders <- strsplit(colnames(combined)[TRcol], ":")
+  # TRnodes <- character()
+  # TRtypes <- character()
+  # TRnames <- character()
+  # for (i in 1:length(TRheaders)) {
+  #   TRnodes[i] <- TRheaders[[i]][2]
+  #   
+  #   # If TR doesn't have enough fields, throw an error
+  #   if (length(TRheaders[[i]]) < 3) {
+  #     stop(paste0("Treatment ", paste(TRheaders[[i]], sep="", collapse=":"), " is missing fields."))
+  #   }
+  #   
+  #   # If name field not provided or blank, set node field as name
+  #   if (length(TRheaders[[i]]) == 3) {
+  #     TRnames[i] <- TRheaders[[i]][2]
+  #   } else if (TRheaders[[i]][4] == "") {
+  #     TRnames[i] <- TRheaders[[i]][2]
+  #   } else {
+  #     TRnames[i] <- TRheaders[[i]][4]
+  #   }
+  #   
+  #   # If node field is blank, throw an error
+  #   if (TRheaders[[i]][2] == "") {
+  #     stop(paste0("Treatment ", paste(TRheaders[[i]], sep="", collapse=":"), " is missing the node field."))
+  #   }
+  #   
+  #   # Match treatment types
+  #   type <- tolower(TRheaders[[i]][3])
+  #   if (type == "inhibitor" | type == "i" | type == "inhib") {
+  #     TRtypes[i] <- "Inhibitor"
+  #   } else if (type == "stimulus" | type == "stim" | type == "s") {
+  #     TRtypes[i] <- "Stimulus"
+  #   } else if (type == "ko" | type == "knockout") {
+  #     TRtypes[i] <- "KO"
+  #   } else {
+  #     stop(paste0("\"", TRheaders[[i]][3], "\" is not a valid treatment type for treatment ", paste(TRheaders[[i]], sep="", collapse=":")))
+  #   }
+  # }
+  # 
+  # # Get signal names
+  # DVheaders <- strsplit(colnames(combined)[DVcol], ":")
+  # namesSignals <- character()
+  # # If name field not provided, set node field as name
+  # for (i in 1:length(DVheaders)) {
+  #   if (length(DVheaders[[i]]) == 2) {
+  #     namesSignals[i] <- DVheaders[[i]][2]
+  #   } else {
+  #     namesSignals[i] <- DVheaders[[i]][3]
+  #   }
+  # }
 
   ################# Duplicated condition cleanup ####################
   #### This code taken from makeCNOlist from CellNOptR
@@ -289,11 +306,10 @@ readMIDASExcel <- function(MIDASfile) {
   dimnames(cues) <- NULL
 
   return(list(
+    treatmentDefs=treatmentDefs,
     namesCues=TRnames,
-    nodesCues=TRnodes,
-    typesCues=TRtypes,
     valueCues=cues,
-    namesSignals=namesSignals,
+    namesSignals=DVnames,
     timeSignals=timeSignals,
     valueSignals=valueSignals,
     valueVariances=valueVariances
