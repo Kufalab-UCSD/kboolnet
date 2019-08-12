@@ -23,7 +23,7 @@ unbindLigand <- function(ligand, names, states) {
   }
   
   # If ligand doesn't exist in names, throw an error
-  if (any(grepl(paste0(ligand, "_"), name))) {
+  if (any(grepl(paste0(ligand, "_"), names))) {
     stop("Ligand ", ligand, " does not exist in network.")
   }
 
