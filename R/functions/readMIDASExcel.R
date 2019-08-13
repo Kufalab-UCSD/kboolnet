@@ -134,10 +134,10 @@ readMIDASExcel <- function(MIDASfile) {
   if (length(tables) > 1) {
     for (i in 2:length(tables)) {
       newCols <- colnames(tables[[i]])[!(colnames(tables[[i]]) %in% colnames(combined))] # Get names of all columns missing from combined
-      combined[,newCols] <- 0 # Add said rows to combined
+      combined[,newCols] <- NA # Add said rows to combined
       
       newCols <- colnames(combined)[!(colnames(combined) %in% colnames(tables[[i]]))] # Get names of all columns missing from tables[[i]]
-      tables[[i]][,newCols] <- 0 # Add said rows to tables[[i]]
+      tables[[i]][,newCols] <- NA # Add said rows to tables[[i]]
       
       combined <- rbind(combined, tables[[i]]) # Merge combined and tables[[i]]
     }
@@ -159,6 +159,9 @@ readMIDASExcel <- function(MIDASfile) {
       stop("Treatment ", TRnames[i], " does not exist in TreatmentDefs.")
     }
   }
+  
+  # Set all treatments that are NA after merging to 0
+  combined[,TRcol][is.na(combined[,TRcol])] <- 0
   
   ### This code obsolete due to TreatmentDefs table
   # # Get TR columns' node, names, and type attributes 
@@ -230,6 +233,9 @@ readMIDASExcel <- function(MIDASfile) {
     dupMatrix<-combined[dupIndex,]
     #compute the new row as the average across duplicate rows
     newRow<-colMeans(dupMatrix, na.rm=TRUE)
+    # if all the values in a column were NA, set new value to NA
+    newRow[colSums(is.na(dupMatrix)) == nrow(dupMatrix)] <- NA
+    
     # variance for these rows
     newVariance = apply(dupMatrix, MARGIN=2, FUN=var, na.rm=T)
 
