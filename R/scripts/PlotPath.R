@@ -85,7 +85,7 @@ if (length(nodes > 0)) {
   
   # Get indices of nodes to keep and only keep them
   nodesInd <- rownames(path) %in% nodes
-  path <- path[nodesInd, drop=F]
+  path <- path[nodesInd, ,drop=F]
 }
 
 plotPath(path, opt$out)
