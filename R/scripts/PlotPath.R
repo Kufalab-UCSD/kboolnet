@@ -10,7 +10,6 @@
 
 ############## Library loading ###############################
 options(stringsAsFactors = F)
-suppressPackageStartupMessages(library(BoolNet))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
@@ -84,8 +83,7 @@ if (length(nodes > 0)) {
   }
   
   # Get indices of nodes to keep and only keep them
-  nodesInd <- rownames(path) %in% nodes
-  path <- path[nodesInd, ,drop=F]
+  path <- path[nodes, ,drop=F]
 }
 
 plotPath(path, opt$out)
