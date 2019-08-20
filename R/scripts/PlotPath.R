@@ -74,7 +74,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 # Load path and set first col as row names
 path <- read.csv(opt$file, header=TRUE)
 rownames(path) <- path[,1]
-path <- path[,2:ncol(path)]
+path <- path[,2:ncol(path), drop=F]
 
 # Keep only the nodes that are wanted
 if (length(nodes > 0)) {
