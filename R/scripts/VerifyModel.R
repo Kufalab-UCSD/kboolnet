@@ -104,6 +104,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/compMatrix.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/inhibitedNetwork.R")))
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
@@ -193,25 +194,7 @@ initStates$name <- gsub(" ", "", initStates$name)
 
 # Create a BoolNet network in which nodes have been inhibited
 if (length(inhib) > 0) {
-  inhibNodes <- character()
-  inhibNodesNames <- character()
-  for (i in 1:length(inhib)) {
-    # Make sure the inhibited nodes/components exist
-    if (!(any(grepl(paste0("^", inhib[i], "(_.*--0|_.*-\\{0\\}|)$"), initStates$name)))) {
-      stop("No neutral state found for inhibited node/component ", inhib[i], ". Please verify that ", inhib[i], " is a valid node/component in the rxncon system.")
-    } 
-    
-    # Find which nodes the inhibition corresponds to
-    inhibRegex <- paste0("(", c(paste0(inhib[i], "_.*--.*"), paste0(".*--", inhib[i], "_.*"),
-                              paste0("^", inhib[i], "$"), paste0(inhib[i], "_.*-\\{.*\\}")), ")", collapse="|")
-    inhibMatch <- grepl(inhibRegex, symbolMapping$name)
-    inhibNodes <- c(inhibNodes, symbolMapping$ID[inhibMatch])
-    inhibNodesNames <- c(inhibNodesNames, symbolMapping$name[inhibMatch])
-    
-    cat("Inhibitor", inhib[i], "matched to node(s)", paste0(symbolMapping$name[inhibMatch], collapse=", "), "\n")
-  }
-  # Fix inhib nodes off
-  network <- fixGenes(network, inhibNodes, 0)
+  network <- inhibitedNetwork(network, inhib, symbolMapping$name, symbolMapping$ID)
 }
 
 # Find the nodes that the ligands correspond to
