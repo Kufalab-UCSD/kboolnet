@@ -28,7 +28,9 @@ option_list = list(
   make_option(c("--nodes", "-n"), action="store", default=NA, type="character",
               help="Comma-separated list of nodes to be displayed in plot. [default: all nodes]"),
   make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Name of PDF file to which plot should be written. [default: plot.pdf]")
+              help="Name of PDF file to which plot should be written. [default: plot.pdf]"),
+  make_option(c("--nodomains", "-d"), action="store_true", default=NA, type="logical",
+              help="Remove domains from rxncon node names. [default: don't remove]")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 opt <- opt[!is.na(opt)] # Discard NA values
@@ -51,7 +53,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(out="./plot.pdf", nodes="")
+default <- list(out="./plot.pdf", nodes="", nodomains=FALSE)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
@@ -74,6 +76,17 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 path <- read.csv(opt$file, header=TRUE)
 rownames(path) <- path[,1]
 path <- path[,2:ncol(path), drop=F]
+
+# Remove domain names if requested
+if (opt$nodomains) {
+  newNames <- gsub("_\\[.*?\\]", "", rownames(path))
+  
+  # If there are ambigious names due to domain simplification, replace them with the old names
+  ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
+  newNames[ambigNames] <- rownames(path)[ambigNames]
+  
+  rownames(path) <- newNames
+}
 
 # Keep only the nodes that are wanted
 if (length(nodes > 0)) {
