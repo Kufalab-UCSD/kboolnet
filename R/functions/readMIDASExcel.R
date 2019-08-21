@@ -61,20 +61,32 @@ readMIDASExcel <- function(MIDASfile) {
   for (i in 1:length(sheets)) {
     headerRows <- grep("TH", sheets[[i]][,1]) # Get row numbers of sub-tables' header rows in each sheet
     
-    # If no TH present, throw error
+    # If no TH present, throw watning
     if (length(headerRows) == 0) {
-      stop("Sheet ", sheetNames[i], " has no TH cells.")
+      stop("Sheet ", sheetNames[i], " has no TH cells, skipping.")
+      next
     }
     
     # If more than one TH row present, iterate through and get all the sub-tables
     if (length(headerRows) > 1) {
       for (j in 1:(length(headerRows)-1)) {
+        # Skip tables marked with :Ignore
+        if (grepl(":Ignore$", sheets[[i]][headerRows[j],1])) {
+          cat("Skipping table", sheets[[i]][headerRows[j],1], "\n")
+          next
+        }
+        
         tables <- c(tables, list(sheets[[i]][(headerRows[j]+1):(headerRows[j+1]-1),])) # Add sub-table to tables list
         names(tables)[length(tables)] <- strsplit(sheets[[i]][headerRows[j],1], ":")[[1]][2] # Set table name based on TH row
       }
     }
-    tables <- c(tables, list(sheets[[i]][(headerRows[length(headerRows)]+1):nrow(sheets[[i]]),])) # Do the same for the last sub-table
-    names(tables)[length(tables)] <- strsplit(sheets[[i]][headerRows[length(headerRows)],1], ":")[[1]][2] # Set table name based on TH row
+    
+    if (!grepl(":Ignore$", sheets[[i]][headerRows[length(headerRows)],1])) {
+      tables <- c(tables, list(sheets[[i]][(headerRows[length(headerRows)]+1):nrow(sheets[[i]]),])) # Do the same for the last sub-table (if it isnt ignored)
+      names(tables)[length(tables)] <- strsplit(sheets[[i]][headerRows[length(headerRows)],1], ":")[[1]][2] # Set table name based on TH row
+    } else {
+      cat("Skipping table", sheets[[i]][headerRows[length(headerRows)],1], "\n")
+    }
   }
   cat("Found", length(tables), "tables across", length(sheets), "sheets.", "\n")
   
@@ -126,6 +138,27 @@ readMIDASExcel <- function(MIDASfile) {
   for (i in 1:length(tables)) {
     col <- grep("^(TR|DV):", names(tables[[i]])) # Get TR and DV column numbers
     stripped <- sapply(strsplit(names(tables[[i]])[col], ":"), function(x) paste0(x[1:2], collapse=":")) # Keep only name field
+    
+    # Try to resolve duplicate TRs/DVs
+    if (any(grepl("DV:", stripped[duplicated(stripped)]))) {
+      stop("Table ", names(tables)[i], " contains duplicate DV columns!")
+    } else if (any(grepl("TR:", stripped[duplicated(stripped)]))) {
+      warning("Table ", names(tables)[i], " contains duplicate TR columns! Attempting to merge (bitwise OR).")
+      while(anyDuplicated(stripped)) {
+        duplName <- stripped[duplicated(stripped)][1] # Get a duplicated TR name
+        
+        duplCols <- as.matrix(tables[[i]][,!grepl(paste0(duplName, "(:|$)"), names(tables[[i]]))]) # Get all the duplicated columns and remove them from original table
+        class(duplCols) <- "numeric"
+        tables[[i]] <- tables[[i]][,!grepl(paste0(duplName, "(:|$)"), names(tables[[i]]))]
+        
+        tables[[i]][,duplName] <- as.numeric(rowSums(duplCols) > 0) # Do a bitwise or across rows
+        
+        col <- grep("^(TR|DV):", names(tables[[i]])) # Update col and stripped
+        stripped <- sapply(strsplit(names(tables[[i]])[col], ":"), function(x) paste0(x[1:2], collapse=":"))
+      }
+    }
+    
+    
     names(tables[[i]])[col] <- stripped
   }
   
