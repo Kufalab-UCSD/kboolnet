@@ -103,6 +103,7 @@ rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
 suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/compMatrix.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
@@ -139,41 +140,9 @@ if (opt$maxrounds < 2) {
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
   
-  if (grepl("^https?:\\/\\/", opt$driveFile)) { # If URL provided
-    # Deactivate authentication and try and access file 
-    drive_auth_config(active = FALSE)
-    
-    # Try accessing file without authentication
-    gDriveID <- as_id(tryCatch({
-      drive_get(id = as_id(opt$driveFile))$id[1]
-    }, error = function(e) {
-      # If access fails, try again with authentication enabled
-      repeat {
-        cat("Public Google Drive file not found. Trying again with authentication...", "\n")
-        drive_auth_config(active = TRUE) # Activate authentication
-        
-        return(tryCatch({ # Try to find file again
-          drive_get(id = as_id(opt$driveFile))$id[1]
-          
-        }, error = function(e){ # If it fails again
-          stop("Google Drive file not found. Either the file does not exist or you do not have permission to view it.")
-        }))
-      }
-    }))
-  } else { # Search for the file in Drive if name provided
-    # Activate Google Drive authentication, required for searching in a user's drive
-    drive_auth_config(active = TRUE)
-    
-    gDriveID <- as_id(drive_find(pattern = opt$driveFile, type = "spreadsheet")$id[1])
-    
-    if(is.na(gDriveID)) { # If file does not exist
-      stop("File not found in Google Drive.")
-    }
-  }
-  
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
-  drive_download(gDriveID, path = masterFile, type = "xlsx", overwrite = T) # Download the file
+  driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
   
 # If local file provided
 } else {
