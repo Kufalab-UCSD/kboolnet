@@ -24,8 +24,8 @@ option_list = list(
               help="Name of mp4 file to which animation should be written. [default: animation.mp4]"),
   make_option(c("--textsize", "-t"), action="store", default=50, type="numeric",
               help="Size of frame number label. [default: 50]"),
-  make_option(c("--zoom", "z"), action="store", default=200, type="numeric",
-              help="Zoom factor for Cytoscape render. [default: 200].")
+  make_option(c("--zoom", "-z"), action="store", default=200, type="numeric",
+              help="Zoom factor for Cytoscape render. Higher = higher quality [default: 200]")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
