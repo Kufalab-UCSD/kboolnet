@@ -243,14 +243,6 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
 
 
 
-    #PART 4 OF IMPLEMENTATION - REMOVE ANY LOOPS TO SELF
-    for node in graph.nodes():
-        #check to see if node has itself as a target
-        if node in list(graph.successors(node)):                        
-            graph.remove_edge(node, node)
-
-
-
     #PART 5 OF IMPLEMENTATION - COLLAPSE MUTUALLY EXCLUSIVE STATES
     
     #the following function is the scoring algorithm for each node used to collapse mutually exclusive states
@@ -364,6 +356,12 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
     for id in mapping:
         id_label[id] = {'label': id}
     nx.set_node_attributes(graph, id_label)
+
+    #PART 4 OF IMPLEMENTATION - REMOVE ANY LOOPS TO SELF
+    for node in graph.nodes():
+        #check to see if node has itself as a target
+        if node in list(graph.successors(node)):
+            graph.remove_edge(node, node)
    
 
 
