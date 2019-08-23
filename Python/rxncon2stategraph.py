@@ -346,10 +346,23 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
             id = pair[0]
             id = re.sub(r'_\[.*?\]', '', id)
             mapping[pair[0]] = id
-            id_label[id] = {'label': id}
+
+    # Figure out which states end up with duplicated names and add back domains to prevent ambiguity
+    rev_mapping = defaultdict(list) # Create "reverse mapping"
+    for key, value in mapping.items():
+        rev_mapping[value].append(key)
+
+    for key, values in rev_mapping.items(): # For each key and value in reverse mapping
+        if len(values) > 1: # If there are duplicates set those mapping keys to be the same as they were before
+            for value in values:
+                mapping[value] = value
+
+
     nx.relabel_nodes(graph, mapping, copy=False)
 
     #make label same as id
+    for id in mapping:
+        id_label[id] = {'label': id}
     nx.set_node_attributes(graph, id_label)
    
 
