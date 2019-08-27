@@ -11,7 +11,7 @@
 driveDownload <- function(driveFile, out, type=NULL) {
   if (grepl("^https?:\\/\\/", driveFile)) { # If URL provided
     # Deactivate authentication and try and access file 
-    drive_auth_config(active = FALSE)
+    drive_deauth()
     
     # Try accessing file without authentication
     gDriveID <- as_id(tryCatch({
@@ -20,7 +20,7 @@ driveDownload <- function(driveFile, out, type=NULL) {
       # If access fails, try again with authentication enabled
       repeat {
         cat("Public Google Drive file not found. Trying again with authentication...", "\n")
-        drive_auth_config(active = TRUE) # Activate authentication
+        drive_auth() # Activate authentication
         
         return(tryCatch({ # Try to find file again
           drive_get(id = as_id(driveFile))$id[1]
