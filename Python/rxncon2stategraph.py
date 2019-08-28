@@ -148,7 +148,7 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
 
 
 
-
+    '''
     # boolean_OR nodes
 
     #list of names of boolean_or nodes
@@ -185,7 +185,7 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
             graph.remove_edge(node, target)
         #eliminate boolean_or node
         graph.remove_node(node)
-   
+    '''
     
 
     ## PART 2 OF IMPLEMENTATION - REMOVE REACTION NODES
@@ -268,47 +268,152 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
         return (node, score)                                    #return value is a tuple
 
     #the following function takes the sources and targets of the inactive node, flips the sign (pos/neg) and applies them to the active node, removing the inactive node from the graph
-    def collapse_states(active_node, inactive_node):
-        print(active_node)
-        print(inactive_node)
+    def add_inverted_edges(inactive_node, active_node):
         sources = list(graph.predecessors(inactive_node))
         targets = list(graph.successors(inactive_node))
         interactions = nx.get_edge_attributes(graph, 'interaction')
         for source in sources:
             source_interaction = interactions[(source, inactive_node)]
             if source_interaction == '-':
-                graph.remove_edge(source, inactive_node)
                 graph.add_edge(source, active_node, interaction='+')
+                logger.debug('- edge from {} to {} changed to + edge from {} to {}'.format(source, inactive_node, source, active_node))
             else: #source_interaction == '+' or boolean_gate
-                graph.remove_edge(source, inactive_node)
                 graph.add_edge(source, active_node, interaction='-')
+                logger.debug('+ edge from {} to {} changed to - edge from {} to {}'.format(source, active_node, source, inactive_node))
         for target in targets:
             target_interaction = interactions[(inactive_node, target)]
             if target_interaction == '-':
-                graph.remove_edge(inactive_node, target)
                 graph.add_edge(active_node, target, interaction='+')
+                logger.debug('- edge from {} to {} changed to + edge from {} to {}'.format(inactive_node, target, active_node, target))
             else: #source_interaction == '+' or boolean_gate
-                graph.remove_edge(inactive_node, target)
                 graph.add_edge(active_node, target, interaction='-')
-        graph.remove_node(inactive_node)
-      
+                logger.debug('- edge from {} to {} changed to + edge from {} to {}'.format(inactive_node, target, active_node, target))
  
     
     components = rxncon_system.components()
-    grouped_states = []
+    grouped_states = {}
 
     for component in components:
-        grouped_states.append(rxncon_system.states_for_component_grouped(component))      #groups the component into different states -> dictionary with component as key and list of different states as value
+        grouped_states.update(rxncon_system.states_for_component_grouped(component))      #groups the component into different states -> dictionary with component as key and list of different states as value
     
+    # Figure out which "clusters" each state is in
+    group_clusters_overlap = defaultdict(list)
+    for key, values in grouped_states.items():
+        for value in values:
+            group_clusters_overlap[value].append(key)
+    
+    # Get list of groups of cluster names based 
+    group_clusters_overlap_list = [group_clusters_overlap[key] for key in group_clusters_overlap if len(group_clusters_overlap[key])]
 
-    group_states_overlap = defaultdict(list)
-    for dictionary in grouped_states:
-        for key, values in dictionary.items():
-            for value in values:
-                group_states_overlap[value].append(key)
+    # Function to merge overlapping clusters
+    def merge_clusters(cluster_list:list):
+        for i in range(len(cluster_list)-1): # For each cluster i in cluster_list (except the last one)
+            for z in range(i+1, len(cluster_list)): # For each cluster z after cluster i
+                if [j for j in cluster_list[i] if j in cluster_list[z]]: # If cluster z and cluster i share values
+                    logger.debug('Merging clusters {} and {}'.format(cluster_list[i], cluster_list[z]))
+                    cluster_list[z] = list(set(cluster_list[i] + cluster_list[z]))
+                    cluster_list[i] = []
+
+        cluster_list = [cluster for cluster in cluster_list if cluster] # Remove empty values
+        return(cluster_list)
+
+    # Merge the overlapping clusters then map back to states
+    group_cluster_overlap_merged = merge_clusters(group_clusters_overlap_list)
+    grouped_states_merged = []
+    for cluster_group in group_cluster_overlap_merged:
+        cluster_states = []
+        for cluster in cluster_group:
+            cluster_states.extend(grouped_states[cluster])
+        cluster_states = list(set(cluster_states))
+        logger.debug('Final cluster of states: {}'.format(cluster_states))
+        if len(cluster_states) > 3:
+            print('doot')
+        grouped_states_merged.append(cluster_states)
+
+    # For test purposes, make complexed, gtp-bound, and phosphorylated states high-scoring (except for Gbg)
+    for node in nodes:
+        if node in ['Gai_[Gbg]--0', 'Gaq_[Gbg]--0', 'Gbg_[Ga]--0', 'Gai_[CCR2]--0', 'Gaq_[CCR2]--0']:
+            score = 2
+        elif re.search(r'(-{gtp}|-{p}|--.*_)', node):
+            score = 1
+        else:
+            score = 0
+
+        nx.set_node_attributes(graph, {node: {'score': score}})
+
+    def merge_nodes(G,nodes, new_node, attr_dict=None):
     
-    print(group_states_overlap)
-        
+       G.add_node(new_node, **attr_dict) # Add the 'merged' node
+    
+       for n1,n2,data in list(G.edges(data=True)):
+           # For all edges related to one of the nodes to merge,
+           # make an edge going to or coming from the `new gene`.
+           if n1 in nodes:
+               G.add_edge(new_node,n2,**data)
+           elif n2 in nodes:
+               G.add_edge(n1,new_node,**data)
+    
+       for n in nodes: # remove the merged nodes
+           G.remove_node(n)
+
+    ''' This method didn't work very well
+    # For each component, merge all of the unbound nodes
+    for component in components:
+        states = rxncon_system.states_for_component(component)
+        unbound_states = [state.name for state in states if re.search(r'--0', state.name)] # Get all the unbound states
+
+        if len(unbound_states) > 1: # If there are more than 1 unbound states
+            new_unbound_node = '{}--0'.format(component.name)
+            merge_nodes(graph, unbound_states, new_unbound_node, {'label': new_unbound_node, 'type': 'state'}) # Merge all unbound states into a single state
+            logger.debug('Merged unbound nodes {} to single node {}'.format(unbound_states, new_unbound_node))
+
+        # Also merge modifications on a given residue, keeping only the modification with the most outgoing edges
+        component_grouped_states = rxncon_system.states_for_component_grouped(component)
+        for locus_states in component_grouped_states.values():
+            if re.search(r'-{.*}', locus_states[0].name): # If the locus is where modifications occur
+                # Make list of tuples with state names and scores based on # of outgoing nodes, then sort by score
+                locus_states_scores = [(state.name, len(list(graph.successors(state.name)))) for state in locus_states]
+                locus_states_scores_sorted = sorted(locus_states_scores, key=lambda tup: tup[1], reverse=True)
+                highest_score_node = locus_states_scores_sorted[0][0]
+                other_nodes = [tup[0] for tup in locus_states_scores_sorted[1:]]
+
+                # Merge all the low scoring nodes into the high scoring nodes
+                for node in other_nodes:
+                    add_inverted_edges(node, highest_score_node)
+                    graph.remove_node(node)
+
+                logger.debug('Collapse modification nodes {} to single node {}'.format(other_nodes, highest_score_node))
+    '''
+
+    # Decide which nodes in each cluster to merge into
+    node_scores = nodes.data('score')
+    for cluster in grouped_states_merged:
+        cluster_scores = [] # Get the cluster scores
+        for state in cluster:
+            cluster_scores.append((state.name, node_scores[state.name]))
+
+        cluster_scores_sorted = sorted(cluster_scores, key=lambda tup: tup[1], reverse=True) # Sort cluster by scores
+        highest_score_node = cluster_scores_sorted[0][0] # The highest scoring nodes
+        other_nodes = [tup[0] for tup in cluster_scores_sorted if tup[0] != highest_score_node] # All the other nodes
+
+        if re.search(r'--0', highest_score_node): # If highest scoring node is an unbound state, merge all complexes into all unbound states
+            unbound_states = [state.name for state in cluster if re.search(r'--0', state.name)] # Get all unbound states
+            complex_states = [state.name for state in cluster if not state.name in unbound_states] # Get all complexed states
+
+            for complex_state in complex_states: # Apply the edges for each complex to all unbound states
+                for unbound_state in unbound_states:
+                    add_inverted_edges(complex_state, unbound_state)
+
+                graph.remove_node(complex_state)
+                
+            logger.debug('Merged complex states {} into mutually exclusive unbound states {}'.format(complex_states, unbound_states))
+        else: # Else, merge all states into highest scoring state
+            for node in other_nodes:
+                add_inverted_edges(node, highest_score_node)
+                graph.remove_node(node)
+
+            logger.debug('Merged states {} into mutually exclusive state {}'.format(other_nodes, highest_score_node))
+
     '''
         for key in grouped_states.keys():
             values = grouped_states[key]
@@ -430,11 +535,11 @@ def setup_logging_colors():
 
 
 if __name__ == '__main__':
-    try:
-        setup_logging_colors()
-        run()
-    except Exception as e:
-        print('ERROR: {}\n{}\nPlease re-run this command with the \'-v DEBUG\' option.'.format(type(e), e))
+    # try:
+    setup_logging_colors()
+    run()
+    # except Exception as e:
+        # print('ERROR: {}\n{}\nPlease re-run this command with the \'-v DEBUG\' option.'.format(type(e), e))
 
 
         
