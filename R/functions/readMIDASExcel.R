@@ -32,13 +32,12 @@ readMIDASExcel <- function(MIDASfile) {
   # Remove empty and non-MIDAS rows and columns
   treatmentDefs <- treatmentDefs[rowSums(is.na(treatmentDefs)) != ncol(treatmentDefs),]
   treatmentDefs <- treatmentDefs[,colSums(is.na(treatmentDefs)) != nrow(treatmentDefs)]
-  treatmentDefs <- treatmentDefs[,grep("^!(Name)|(Type)|(Nodes)|(Components)", treatmentDefs[1,])]
+  treatmentDefs <- treatmentDefs[,grep("^!(Name|Type|Nodes)", treatmentDefs[1,])]
   
   # Set column names
   colnames(treatmentDefs)[grep("^!Name", treatmentDefs[1,])] <- "name"
   colnames(treatmentDefs)[grep("^!Type", treatmentDefs[1,])] <- "type"
   colnames(treatmentDefs)[grep("^!Nodes", treatmentDefs[1,])] <- "nodes"
-  colnames(treatmentDefs)[grep("^!Components", treatmentDefs[1,])] <- "components"
   treatmentDefs <- treatmentDefs[2:nrow(treatmentDefs), ,drop=F]
   
   # Replace aliases of treatment types with their correct names
@@ -49,6 +48,11 @@ readMIDASExcel <- function(MIDASfile) {
   # Validation of treatment types
   if (any(!grepl("(Inhibitor|Stimulus|KO)", treatmentDefs$type))) {
     stop("Invalid treatment type detected in TreatmentDefs sheet")
+  }
+  
+  # Turn comma separated lists into actual lists
+  for (i in 1:nrow(treatmentDefs)) {
+    if (!is.na(treatmentDefs$nodes[i])) treatmentDefs$nodes[i] <- list(trimws(strsplit(treatmentDefs$nodes[i][[1]], ",")[[1]]))
   }
   
   ########### Experimental data sheet loading ################
