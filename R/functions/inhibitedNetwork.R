@@ -9,7 +9,7 @@
 # Dependencies: BoolNet
 ##############################################
 
-inhibitedNetwork <- function(network, inhibList, names, symbols) {
+inhibitedNetwork <- function(network, inhib, names, symbols) {
   inhibNodes <- character()
   for (i in 1:length(inhib)) {
     # Make sure the inhibited nodes/components exist
