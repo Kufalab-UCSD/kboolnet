@@ -55,6 +55,15 @@ readMIDASExcel <- function(MIDASfile) {
     if (!is.na(treatmentDefs$nodes[i])) treatmentDefs$nodes[i] <- list(trimws(strsplit(treatmentDefs$nodes[i][[1]], ",")[[1]]))
   }
   
+  # Escape all regex characters and expand * to .*? for regexes
+  treatmentDefs$regex <- list(nrow(treatmentDefs))
+  for (i in 1:nrow(treatmentDefs)) {
+    for (j in 1:length(treatmentDefs$nodes[[i]])) {
+      treatmentDefs$regex[[i]][j] <- gsub('([.|()\\^{}+$?]|\\[|\\])', '\\\\\\1', treatmentDefs$nodes[[i]][j])
+      treatmentDefs$regex[[i]][j] <- gsub('\\*', '\\.\\*\\?', treatmentDefs$regex[[i]][j])
+    }
+  }
+  
   ########### Experimental data sheet loading ################
   # Load all sheets (except for TreatmentDef)
   sheetNames <- names(wb)[names(wb) != "TreatmentDefs"]
@@ -189,6 +198,10 @@ readMIDASExcel <- function(MIDASfile) {
   # Get TR and DV names
   TRnames <- sapply(strsplit(colnames(combined)[TRcol], ":"), "[[", 2)
   DVnames <- sapply(strsplit(colnames(combined)[DVcol], ":"), "[[", 2)
+  
+  # Escape DVnames for regex matching
+  DVregex <- gsub('([.|()\\^{}+$?]|\\[|\\])', '\\\\\\1', DVnames)
+  DVregex <- gsub('\\*', '\\.\\*\\?', DVregex)
   
   # Make sure TR names exist in TreatmentDefs
   for (i in 1:length(TRnames)) {
@@ -353,6 +366,7 @@ readMIDASExcel <- function(MIDASfile) {
     namesCues=TRnames,
     valueCues=cues,
     namesSignals=DVnames,
+    regexSignals=DVregex,
     timeSignals=timeSignals,
     valueSignals=valueSignals,
     valueVariances=valueVariances
