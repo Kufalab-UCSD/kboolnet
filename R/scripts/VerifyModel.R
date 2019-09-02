@@ -236,8 +236,6 @@ for (i in 1:maxrounds) {
   # Unbind ligands from complexes and remove any ligand
   for (lig in 1:length(ligands)){
     initStates$state <- unbindLigand(ligands[lig], initStates$name, initStates$state)
-    ligRegex <- paste0("(", c(paste0(ligands[lig], "_.*--.*"), paste0(".*--", ligands[lig], "_.*"),
-                              paste0("^", ligands[lig], "$"), paste0(ligands[lig], "_.*-\\{.*\\}")), ")", collapse="|")
     initStates$state[initStates$name %in% ligNodesNames] <- 0
   }
   
@@ -252,7 +250,7 @@ for (i in 1:maxrounds) {
   # Add ligands in fully neutral state
   for (lig in 1:length(ligands)){
     initStates$state[grepl(paste0(ligands[lig], "_.*--0$"), initStates$name)] <- 1
-    initStates$state[grepl(paste0(ligands[lig], "_.*--\\{0\\}$"), initStates$name)] <- 1
+    initStates$state[grepl(paste0(ligands[lig], "_.*-\\{0\\}$"), initStates$name)] <- 1
   }
   
   # Simulate w/ ligand
