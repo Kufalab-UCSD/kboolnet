@@ -109,5 +109,5 @@ plotMIDASComp <- function(MIDASlist1, MIDASlist2, dataWidth = NA) {
   }
   
   # Put them together and plot
-  suppressWarnings(suppressMessages(plot_grid(dataPlot, cuesPlot, align="h", rel_widths = widths)))
+  return(suppressWarnings(suppressMessages(plot_grid(dataPlot, cuesPlot, align="h", rel_widths = widths))))
 }
