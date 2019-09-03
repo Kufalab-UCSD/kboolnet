@@ -29,6 +29,8 @@ option_list = list(
               help="Comma-separated list of nodes to be displayed in plot. [default: all nodes]"),
   make_option(c("--out", "-o"), action="store", default=NA, type="character",
               help="Name of PDF file to which plot should be written. [default: plot.pdf]"),
+  make_option(c("--ratio", "-r"), action="store", default=NA, type="numeric",
+              help="Width:height ratio of the tiles in the graph. [default: 0.8]"),
   make_option(c("--nodomains", "-d"), action="store_true", default=NA, type="logical",
               help="Remove domains from rxncon node names. [default: don't remove]")
 )
@@ -53,7 +55,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(out="./plot.pdf", nodes="", nodomains=FALSE)
+default <- list(out="./plot.pdf", nodes="", nodomains=FALSE, ratio=0.8)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
@@ -99,4 +101,4 @@ if (length(nodes > 0)) {
   path <- path[nodes, ,drop=F]
 }
 
-plotPath(path, opt$out)
+plotPath(path, opt$out, ratio=opt$ratio)
