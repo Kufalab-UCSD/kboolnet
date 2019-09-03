@@ -348,18 +348,20 @@ readMIDASExcel <- function(MIDASfile) {
     timeData <- as.matrix(timeData, nrow=nrow(timeData), ncol=ncol(timeData))
     timeVariances <- as.matrix(timeVariances, nrow=nrow(timeVariances), ncol=ncol(timeVariances))
     
-    # Strip dimnames
-    dimnames(timeData) <- NULL
-    dimnames(timeVariances) <- NULL
-    
     # Save to list
     valueSignals[[i]] <- timeData
     valueVariances[[i]] <- timeVariances
   }
   
+  # Turn valueSignals and valueVariances into 3D arrays
+  dimensions <- c(nrow(cues), length(DVnames), length(timeSignals))
+  namesDimensions <- list(1:nrow(cues), DVnames, timeSignals)
+  valueSignals <- array(unlist(valueSignals), dim=dimensions, dimnames=namesDimensions)
+  valueVariances <- array(unlist(valueVariances), dim=dimensions, dimnames=namesDimensions)
+
   # Make cues a matrix
   cues <- as.matrix(cues, nrow=nrow(cues), ncol=ncol(cues))
-  dimnames(cues) <- NULL
+  rownames(cues) <- 1:nrow(cues)
 
   return(list(
     treatmentDefs=treatmentDefs,

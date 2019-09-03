@@ -17,13 +17,13 @@ plotMIDAS <- function(MIDASlist, dataWidth = NA) {
   data <- data.frame(cueNum=numeric(), time=numeric(), signal=character(), value=numeric(), variance=numeric())
   for (i in 1:length(MIDASlist$timeSignals)) {
     # Get the values an gather them
-    timeValues <- as.data.frame(MIDASlist$valueSignals[i]) # Get data values
+    timeValues <- as.data.frame(MIDASlist$valueSignals[,,i]) # Get data values
     timeValues <- cbind(timeValues, 1:nrow(timeValues)) # Add column to keep track of the cue combination
     colnames(timeValues) <- c(MIDASlist$namesSignals, "cueNum") # Set column names
     timeValues <- gather(timeValues, "signal", "value", -cueNum)
     
     # Do the same as above for variances
-    timeVariances <- as.data.frame(MIDASlist$valueVariances[i]) # Get data variances
+    timeVariances <- as.data.frame(MIDASlist$valueVariances[,,i]) # Get data variances
     timeVariances <- cbind(timeVariances, 1:nrow(timeVariances)) # Add column to keep track of the cue combination
     colnames(timeVariances) <- c(MIDASlist$namesSignals, "cueNum") # Set column names
     timeVariances <- gather(timeVariances, "signal", "variance", -cueNum)
@@ -87,6 +87,7 @@ plotMIDAS <- function(MIDASlist, dataWidth = NA) {
     scale_x_continuous(limits=c(0,1), expand=c(0,0)) + scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
     theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank(), # Remove axis labels
           legend.position = "none", panel.background = element_blank(), strip.text.y = element_blank(), # Remove legend, background, and y labels
+          # strip.background = element_blank(), strip.text.x = element_text(angle=75, vjust=1),
           plot.margin = unit(c(0,5.5,0,0), "pt"), plot.background = element_blank()) # Remove margins, these are set by data plot
   
   # If width wasn't provided, make a best guess for it
