@@ -121,6 +121,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
                                  'modifier': row[excel_book._column_contingency_modifier].value.strip()})
 
     ### STEP 2: Map contingencies to nodes
+    required_components = []
     for con in con_filtered:
         row = con_rows[con['row_num']]
         con['node'] = ''
@@ -164,16 +165,32 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
         if not con['node'] in graph.node:
             raise ValueError('Unable to match contingency {} to a node in the srgraph.'.format(con['modifier']))
         else:
-            logger.debug('Matched contingency {} to node {}'.format(con['modifier'], con['node']))
+            if not re.search(r'<.*>', con['modifier']): # If not a boolean node
+                components = re.search(r'(?:([A-Za-z0-9]*)_\[.*?\](?:.*?([A-Za-z0-9]*)_\[.*?\])?|^[A-Za-z0-9]*$)', con['node']).groups() # Get all components in the state
+                components = [component for component in components if component != None] # Discard None components
+                required_components.extend(components) # Append components for state to list of required components
+            logger.debug('Matched contingency {} to node {}, contains components {}'.format(con['modifier'], con['node'], components))
 
     ### STEP 3: For each filtered contingency (ie a state), add reaction(s) that produce(s) state to list (also add target reactions)
+    required_components = list(set(required_components)) # Make sure there are no duplicate components
     required_reactions = []
     for con in con_filtered:
-        if not (re.match(r'<.*>', con['target']) or re.match(r'\[.*\]', con['target'])): # If target not a global state or boolean node, add it
+        if not (re.search(r'<.*>', con['target']) or re.search(r'\[.*\]', con['target'])): # If target not a global state or boolean node, add it
             required_reactions.append(con['target'])
 
         if graph.nodes(data='type')[con['node']] == 'state':
-            required_reactions.extend(graph.predecessors(con['node']))
+            con_reactions = [r for r in graph.predecessors(con['node'])]
+            con_required_reactions = []
+
+            for reaction in con_reactions: # For all of the reactions that produce that state
+                reaction_components = re.search(r'([A-Za-z0-9]*)(?:_\[.*\])?_.*?_([A-Za-z0-9]*)(?:_\[.*\])?', reaction).group(1,2) # Get both the components involved in the reaction
+                if reaction_components[0] in required_components and reaction_components[1] in required_components:
+                    con_required_reactions.append(reaction) # If both components of reaction are required components, add to con_required_reactions
+
+            if len(con_required_reactions) > 0: # If reaction producing state that only involves require components found, add it to required reactions
+                required_reactions.extend(con_required_reactions)
+            else: # Otherwise just add all the reactions that produce that state
+                required_reactions.extend(con_reactions)
     required_reactions = list(dict.fromkeys(required_reactions))
 
     ### STEP 4: Check if required reactions already in rxn_filtered and add them if missing
