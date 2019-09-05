@@ -157,7 +157,7 @@ if (!(is.na(opt$MIDASDriveFile))) {
   
   # Download file
   MIDASFile  <- paste0(outPath, "MIDAS.xlsx")
-  driveDownload(driveFile = opt$rxnconDriveFile, out = MIDASFile, type = "spreadsheet")
+  driveDownload(driveFile = opt$MIDASDriveFile, out = MIDASFile, type = "spreadsheet")
 } else { # If local file provided
   MIDASFile <- normalizePath(opt$MIDASFile)
   
