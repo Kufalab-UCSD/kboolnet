@@ -165,7 +165,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
         if not con['node'] in graph.node:
             raise ValueError('Unable to match contingency {} to a node in the srgraph.'.format(con['modifier']))
         else:
-            if not re.search(r'<.*>', con['modifier']): # If not a boolean node
+            if not re.search(r'^(<.*>|\[.*\])$', con['modifier']): # If not a boolean node or a global state
                 components = re.search(r'(?:([A-Za-z0-9]*)_\[.*?\](?:.*?([A-Za-z0-9]*)_\[.*?\])?|^[A-Za-z0-9]*$)', con['node']).groups() # Get all components in the state
                 components = [component for component in components if component != None] # Discard None components
                 required_components.extend(components) # Append components for state to list of required components
@@ -175,7 +175,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     required_components = list(set(required_components)) # Make sure there are no duplicate components
     required_reactions = []
     for con in con_filtered:
-        if not (re.search(r'<.*>', con['target']) or re.search(r'\[.*\]', con['target'])): # If target not a global state or boolean node, add it
+        if not re.search(r'^(<.*>|\[.*\])$', con['target']): # If target not a global state or boolean node, add it
             required_reactions.append(con['target'])
 
         if graph.nodes(data='type')[con['node']] == 'state':
