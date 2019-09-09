@@ -130,7 +130,7 @@ if (!(is.na(opt$rxnconDriveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules... ")
-suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
+suppressWarnings(stderr <- system2(command = "python3.6", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
                                                                  "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -142,7 +142,7 @@ cat("Done.", "\n")
 # Pass files to rxncon for processing
 cat("Generating BoolNet files... ")
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-suppressWarnings(stderr <- system2("python3", args = c(paste0(rxnconPath, "rxncon2boolnet.py"), modulesFile, "--output",
+suppressWarnings(stderr <- system2("python3.6", args = c(paste0(rxnconPath, "rxncon2boolnet.py"), modulesFile, "--output",
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
@@ -174,14 +174,6 @@ cat("Processing MIDAS file...", "\n")
 MIDASlist <- readMIDASExcel(MIDASFile)
 cat("Done.", "\n")
 
-# Create MIDAS list to store simulation results
-simMIDASlist <- MIDASlist
-simMIDASlist$timeSignals <- c(0, 1)
-emptyArray <- array(dim = c(dim(MIDASlist$valueSignals)[1], dim(MIDASlist$valueSignals)[2], 2), # Empty array with same dimensions as original, except only 2 timepoints
-                    dimnames = list(dimnames(MIDASlist$valueSignals)[[1]], dimnames(MIDASlist$valueSignals)[[2]], c(0, 1)))
-simMIDASlist$valueSignals <- emptyArray
-simMIDASlist$valueVariances <- emptyArray
-
 ################# BoolNet setup ######################
 # Load network
 network    <- loadNetwork(paste0(netFilePrefix, ".boolnet"), symbolic=TRUE)
@@ -195,6 +187,53 @@ symbolMapping       <- symbolMapping[,1:2]
 initStates <- read.csv(paste0(netFilePrefix, '_initial_vals.csv'), col.names=c("ID","state","name"), header=F)
 initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
+
+# Try to match all treatments to rxncon nodes. If this fails, remove that treatment and all
+# places where that treatment was used
+removeTreatments <- numeric()
+for (i in 1:length(MIDASlist$namesCues)) {
+  treatment <- MIDASlist$treatmentDefs[MIDASlist$treatmentDefs$name == MIDASlist$namesCues[i],] # Get the treatment
+
+  # Try mapping regex to nodes
+  for (j in 1:length(treatment$regex[[1]])) {
+    if(!any(grepl(paste0("^", treatment$regex[[1]][j], "(_.*--0|_.*-\\{0\\}|)$"), initStates$name))) { # If no nodes matched
+      warning("Treatment ", treatment$name, " (node(s): ", paste0(treatment$nodes[[1]][j], collapse=", "),
+              ") could not be matched to nodes in the rxncon system, removing data points involving this treatment.")
+
+      # Remove rows from MIDAS list that used this treatment
+      cueRows <- which(as.logical(MIDASlist$valueCues[,i]))
+      if (length(cueRows) > 0) {
+        MIDASlist$valueCues <- MIDASlist$valueCues[-cueRows,]
+        MIDASlist$valueSignals <- MIDASlist$valueSignals[-cueRows,,]
+        MIDASlist$valueVariances <- MIDASlist$valueVariances[-cueRows,,]
+      }
+
+      # Add this treatment to list of treatments to remove from treatmentDefs/namesCues
+      removeTreatments <- c(removeTreatments, i)
+    }
+  }
+}
+if(length(removeTreatments) > 0) {
+  MIDASlist$valueCues <- MIDASlist$valueCues[,-removeTreatments]
+  MIDASlist$treatmentDefs <- MIDASlist$treatmentDefs[!(MIDASlist$treatmentDefs$name %in% MIDASlist$namesCues[removeTreatments]),]
+  MIDASlist$namesCues <- MIDASlist$namesCues[-removeTreatments]
+}
+
+# Do the same as above but for measurements
+removeMeasurements <- numeric()
+for (i in 1:length(MIDASlist$namesSignals)) {
+  if(!any(grepl(MIDASlist$regexSignals[i], symbolMapping$name))) {
+    warning("Measurement ", MIDASlist$namesSignals[i], " could not be matched to a node in the rxncon system, removing data points involving this measurment.")
+    removeMeasurements <- c(removeMeasurements, i)
+  }
+}
+# Remove the measurements tagged for removal
+if(length(removeMeasurements) > 0) {
+  MIDASlist$valueSignals <- MIDASlist$valueSignals[,-removeMeasurements,]
+  MIDASlist$valueVariances <- MIDASlist$valueVariances[,-removeMeasurements,]
+  MIDASlist$namesSignals <- MIDASlist$namesSignals[-removeMeasurements]
+  MIDASlist$regexSignals <- MIDASlist$regexSignals[-removeMeasurements]
+}
 
 # Get all ligand nodes/components
 ligNodes <- character()
@@ -216,6 +255,14 @@ for (i in 1:length(MIDASlist$namesSignals)) {
 }
 
 ####################### Simulate #########################
+# Create MIDAS list to store simulation results
+simMIDASlist <- MIDASlist
+simMIDASlist$timeSignals <- c(0, 1)
+emptyArray <- array(dim = c(dim(MIDASlist$valueSignals)[1], dim(MIDASlist$valueSignals)[2], 2), # Empty array with same dimensions as original, except only 2 timepoints
+                    dimnames = list(dimnames(MIDASlist$valueSignals)[[1]], dimnames(MIDASlist$valueSignals)[[2]], c(0, 1)))
+simMIDASlist$valueSignals <- emptyArray
+simMIDASlist$valueVariances <- emptyArray
+
 # Simulation rounds is equal to number of cue combinations
 rounds <- nrow(MIDASlist$valueCues)
 
@@ -308,12 +355,15 @@ avgMIDASlist$valueSignals[,,1] <- MIDASlist$valueSignals[,,1]
 avgMIDASlist$valueSignals[,,2] <- apply(MIDASlist$valueSignals[,,2:length(MIDASlist$timeSignals)], 1:2, mean, na.rm = TRUE)
 avgMIDASlist$valueSignals[is.nan(avgMIDASlist$valueSignals)] <- NA # Turn all NaNs into NAs
 
-# Calculate squared errors
+# Calculate squared errors and create new MIDASlist containing them
 initErr <- (avgMIDASlist$valueSignals[,,1] - simMIDASlist$valueSignals[,,1])^2
 finalErr <- (avgMIDASlist$valueSignals[,,2] - simMIDASlist$valueSignals[,,2])^2
+avgErr <- apply(array(c(unlist(initErr), unlist(finalErr)), dim=c(nrow(initErr), ncol(initErr), 2)), 1:2, mean, na.rm = TRUE)
+avgErr[is.nan(avgErr)] <- NA # Turn all NaNs into NAs
 
 cat("Mean square error for initial timepoint: ", mean(initErr, na.rm = TRUE), "\n")
 cat("Mean square error for final timepoint: ", mean(finalErr, na.rm = TRUE), "\n")
+cat("Mean square error for all data:", mean(avgErr, na.rm = TRUE), "\n")
 
 ##################### Plot and save data ##############################
 # Plots
@@ -321,16 +371,12 @@ cat("Generating plots... ")
 height = 0.9 * nrow(MIDASlist$valueCues)
 width = 0.3 * (length(MIDASlist$namesSignals) + (4 * length(MIDASlist$namesCues)))
 p <- plotMIDAS(MIDASlist)
-p
 save_plot(paste0(outPath, "Experimental_MIDAS.pdf"), p, base_height = height, base_width = width)
 p <- plotMIDAS(avgMIDASlist)
-p
 save_plot(paste0(outPath, "Experimental_Averaged_MIDAS.pdf"), p, base_height = height, base_width = width)
 p <- plotMIDAS(simMIDASlist)
-p
 save_plot(paste0(outPath, "Simulation_MIDAS.pdf"), p, base_height = height, base_width = width)
-p <- plotMIDASComp(avgMIDASlist, simMIDASlist)
-p
+p <- plotMIDASComp(avgMIDASlist, simMIDASlist, avgErr)
 save_plot(paste0(outPath, "Comparison_MIDAS.pdf"), p, base_height = height, base_width = width)
 cat("Done.", "\n")
 
