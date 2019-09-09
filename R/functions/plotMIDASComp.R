@@ -40,54 +40,73 @@ gatherMIDASlist <- function(MIDASlist) {
   return(data)
 }
 
-plotMIDASComp <- function(MIDASlist1, MIDASlist2, dataWidth = NA) {
+plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = NA) {
   # First we must do some processing to put the MIDASlist data into a format that can be plotted (key-value-ish)
-  data1 <- gatherMIDASlist(MIDASlist1)
-  data2 <- gatherMIDASlist(MIDASlist2)
-  allData <- rbind(data1, data2)
+  expData <- gatherMIDASlist(expMIDASlist)
+  simData <- gatherMIDASlist(simMIDASlist)
+  allData <- rbind(expData, simData)
+  
+  # Do something similar with the error matrix
+  errMIDASlist <- expMIDASlist
+  errMIDASlist$valueSignals <- array(errMat, dim = c(nrow(expMIDASlist$valueCues), length(expMIDASlist$namesSignals),1))
+  errMIDASlist$timeSignals <- c(1)
+  errData <- gatherMIDASlist(errMIDASlist)
   
   # Remove NA values - this causes weird behavior, don't do it
   # data <- data[!is.na(data$value),]
   
   # Also process the cues data
-  cues <- as.data.frame(MIDASlist1$valueCues)
-  colnames(cues) <- MIDASlist1$namesCues
+  cues <- as.data.frame(expMIDASlist$valueCues)
+  colnames(cues) <- expMIDASlist$namesCues
   cues$cueNum <- 1:nrow(cues)
   cuesGather <- gather(cues, "cue", "value", -cueNum)
   cuesGather$value[cuesGather$value == 0] <- "None" # Set all zeroes to None
-  for (cue in MIDASlist1$namesCues) { # Set cues to their types
-    cuesGather$value[cuesGather$cue == cue & cuesGather$value == 1] <- MIDASlist1$treatmentDefs$type[MIDASlist1$treatmentDefs$name == cue]
+  for (cue in expMIDASlist$namesCues) { # Set cues to their types
+    cuesGather$value[cuesGather$cue == cue & cuesGather$value == 1] <- expMIDASlist$treatmentDefs$type[expMIDASlist$treatmentDefs$name == cue]
   }
   cuesGather$value <- factor(cuesGather$value)
   
-  # Check which panels will have no data in them and make a new df with that info
-  allPanels <- unique(allData[,c("cueNum","signal")]) # Get all the panels
-  dataPanels <- unique(allData[!is.na(allData$value),][,c("cueNum","signal")]) # Get only panels with data
+  # Check which panels will have no experimental data in them and make a new df with that info
+  allPanels <- unique(expData[,c("cueNum","signal")]) # Get all the panels
+  dataPanels <- unique(expData[!is.na(expData$value),c("cueNum","signal")]) # Get only panels with data
   emptyPanels <- rbind(allPanels, dataPanels)
   emptyPanels <- emptyPanels[!(duplicated(emptyPanels) | duplicated(emptyPanels, fromLast = T)),] # Remove duplicates, leaving only panels without data
   
   # Remove empty values from data
-  data1 <- data1[!(is.na(data1$value)),]
-  data2 <- data2[!(is.na(data2$value)),]
+  expData <- expData[!(is.na(expData$value)),]
+  simData <- simData[!(is.na(simData$value)),]
   
   # If there are empty panels, add empty values to them so they will still be drawn
   if (nrow(emptyPanels) > 0) {
     emptyPanels[,c("variance", "value", "time")] <- NA
-    data1 <- rbind(data1, emptyPanels)
+    expData <- rbind(expData, emptyPanels)
   }
+  
+  
 
   # Data plot
+  xlimits <- c(min(allData$time, na.rm = T), max(allData$time, na.rm = T))
+  ylimits <- c(min(allData$value, na.rm = T), max(allData$value, na.rm =T))
+  panelHeight <- (ylimits[2] - ylimits[1]) * 1.3
+  panelWidth <- (xlimits[2] - xlimits[1]) * 1.3
   dataPlot <- ggplot() + 
-    # geom_tile(data=emptyPanels, aes(fill="green", x=x, y=y, height=hieght, ymax=ymax)) +
-    geom_line(data=data1, aes(x=time, y=value)) +
-    geom_point(data=data1, aes(x=time, y=value)) +
-    geom_line(data=data2, aes(x=time, y=value), color="red") +
-    geom_point(data=data2, aes(x=time, y=value), color="red") +
+    geom_tile(data=errData, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
+                               width = panelWidth, fill=value), alpha = 0.6) +
+    scale_fill_gradient(low="green", high="red", limits=c(0,1), position="left") +
+    geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
+                                    width = panelWidth), fill = "grey", alpha = 0.6) +
+    geom_line(data=simData, aes(x=time, y=value), color="blue") +
+    geom_point(data=simData, aes(x=time, y=value), color="blue") +
+    geom_line(data=expData, aes(x=time, y=value), color="black") +
+    geom_point(data=expData, aes(x=time, y=value), color="black") +
     # geom_errorbar(data=data, aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
+    coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
+    xlab("Time (min)") + ylab("Signal") + labs(fill="MSE") +
     facet_grid(cols=vars(signal), rows=vars(cueNum)) + # This splits the graph into times and cues
     theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
           panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
-          plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"))
+          plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"), legend.position = "left")
+  dataPlot
     
   # Cues plot
   cueColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3", "KO"="darkblue")
@@ -103,7 +122,7 @@ plotMIDASComp <- function(MIDASlist1, MIDASlist2, dataWidth = NA) {
   
   # If width wasn't provided, make a best guess for it
   if (is.na(dataWidth)) {
-    widths = c(length(MIDASlist1$namesSignals), length(MIDASlist1$namesCues)/4)
+    widths = c(length(expMIDASlist$namesSignals), length(expMIDASlist$namesCues)/4)
   } else {
     widths = c(dataWidth, 1)
   }
