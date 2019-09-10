@@ -369,6 +369,8 @@ for (i in 1:length(bins)) {
     binTimes[i] <- mean(bin)
   }
 }
+binnedData <- array(dim = c(nrow(MIDASlist$valueCues), length(MIDASlist$namesSignals), length(bins)), # Create array to put binned data together
+                    dimnames = list(1:nrow(MIDASlist$valueCues), MIDASlist$namesSignals, binNames))
 
 # Create MIDASlist to store the binned data
 binMIDASlist <- MIDASlist
@@ -376,8 +378,6 @@ binMIDASlist$valueVariances <- binnedData
 binMIDASlist$timeSignals <- binTimes
 
 # Bin the data
-binnedData <- array(dim = c(nrow(MIDASlist$valueCues), length(MIDASlist$namesSignals), length(bins)), # Create array to put binned data together
-                    dimnames = list(1:nrow(MIDASlist$valueCues), MIDASlist$namesSignals, binNames))
 for (i in 1:length(bins)) {
   bin <- bins[[i]]
   binTimes <- MIDASlist$timeSignals > bin[1] & MIDASlist$timeSignals <= bin[2] # Get all the time signals for the bin
