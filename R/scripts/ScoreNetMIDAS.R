@@ -355,6 +355,38 @@ avgMIDASlist$valueSignals[,,1] <- MIDASlist$valueSignals[,,1]
 avgMIDASlist$valueSignals[,,2] <- apply(MIDASlist$valueSignals[,,2:length(MIDASlist$timeSignals)], 1:2, mean, na.rm = TRUE)
 avgMIDASlist$valueSignals[is.nan(avgMIDASlist$valueSignals)] <- NA # Turn all NaNs into NAs
 
+# Create bins and bin names/times
+bins <- list(c(-Inf, 0), c(0,3), c(3, 30), c(30, 300), c(300, Inf)) # These are the bins; for bin c(a, b) timepoints a < t <= b will be averaged
+binNames <- sapply(bins, paste0, collapse="< t <=")
+binTimes <- numeric(length(bins)) # This is for plotting purposes
+for (i in 1:length(bins)) {
+  bin <- bins[[i]]
+  if (bin[1] == -Inf) { # If bin goes from negative infinity to a point, set that point as the time 
+    binTimes[i] <- bin[2]
+  } else if (bin[2] == Inf) { # If bin goes from point to infinity, set point as the time
+    binTimes[i] <- bin[1]
+  } else { # Otherwise, set time as mean of bin points
+    binTimes[i] <- mean(bin)
+  }
+}
+
+# Create MIDASlist to store the binned data
+binMIDASlist <- MIDASlist
+binMIDASlist$valueVariances <- binnedData
+binMIDASlist$timeSignals <- binTimes
+
+# Bin the data
+binnedData <- array(dim = c(nrow(MIDASlist$valueCues), length(MIDASlist$namesSignals), length(bins)), # Create array to put binned data together
+                    dimnames = list(1:nrow(MIDASlist$valueCues), MIDASlist$namesSignals, binNames))
+for (i in 1:length(bins)) {
+  bin <- bins[[i]]
+  binTimes <- MIDASlist$timeSignals > bin[1] & MIDASlist$timeSignals <= bin[2] # Get all the time signals for the bin
+  binArray <- MIDASlist$valueSignals[,,binTimes, drop=F] # Get the data of the bin
+  binnedData[,,i] <- apply(binArray, 1:2, mean, na.rm = TRUE) # Average and store to binnedData
+}
+binnedData[is.nan(binnedData)] <- NA
+binMIDASlist$valueSignals <- binnedData
+
 # Calculate squared errors and create new MIDASlist containing them
 initErr <- (avgMIDASlist$valueSignals[,,1] - simMIDASlist$valueSignals[,,1])^2
 finalErr <- (avgMIDASlist$valueSignals[,,2] - simMIDASlist$valueSignals[,,2])^2
