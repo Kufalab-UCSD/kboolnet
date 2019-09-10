@@ -17,7 +17,7 @@ suppressMessages(library(openxlsx))
 suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
-suppressMessages(library(cowplot))
+suppressMessages(library(egg))
 
 ################# Argument parsing #################
 # Get commandline args
