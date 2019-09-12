@@ -18,7 +18,7 @@ suppressPackageStartupMessages(library(optparse))
 ############### Argument parsing and setup ###################
 # Get commandline args
 option_list = list(
-  make_option("--config", action="store", default=NA, type="character",
+  make_option(c("--config", "-c"), action="store", default=NA, type="character",
               help="Path of config file. You can specify parameters here instead of passing them as command-line
               arguments"),
   make_option("--kboolnetPath", action="store", default=NA, type="character",

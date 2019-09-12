@@ -40,7 +40,7 @@ plotCompMat <- function(mat) {
 ################# Argument parsing #################
 # Get commandline args
 option_list = list(
-  make_option("--config", action="store", default=NA, type="character",
+  make_option(c("--config", "-c"), action="store", default=NA, type="character",
               help="Path of config file. You can specify parameters here instead of passing them as command-line
               arguments"),
   make_option("--kboolnetPath", action="store", default=NA, type="character",
@@ -55,9 +55,9 @@ option_list = list(
               help="Comma-separated modules to be loaded from master rxncon file [default: load all modules]"),
   make_option("--minQuality", action="store", default=NA, type="integer",
               help="Minimum quality for rule to be loaded [default: 0]"),
-  make_option("--out", action="store", default=NA, type="character",
+  make_option(c("--out", "-o"), action="store", default=NA, type="character",
               help="Folder to which output files will be written [default: ./out/]"),
-  make_option("--ligands", action="store", default=NA, type="character",
+  make_option(c("--ligands", "-l"), action="store", default=NA, type="character",
               help="Comma-separated rxncon name(s) of ligand component(s) to be toggled in verification simulation"),
   make_option("--rounds", action="store", default=NA, type="integer",
               help="Maximum number of ligand/no-ligand simulation pairs that should be run (default: 20)"),
