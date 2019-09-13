@@ -95,10 +95,10 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
     scale_fill_gradient(low="green", high="red", limits=c(0,1), position="left") +
     geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
                                     width = panelWidth), fill = "grey", alpha = 0.6) +
-    geom_line(data=simData, aes(x=time, y=value), color="blue") +
-    geom_point(data=simData, aes(x=time, y=value), color="blue") +
-    geom_line(data=expData, aes(x=time, y=value), color="black") +
-    geom_point(data=expData, aes(x=time, y=value), color="black") +
+    geom_line(data=simData, aes(x=time, y=value), linetype = "twodash") +
+    geom_point(data=simData, aes(x=time, y=value)) +
+    geom_line(data=expData, aes(x=time, y=value)) +
+    geom_point(data=expData, aes(x=time, y=value)) +
     # geom_errorbar(data=data, aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
     coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
     xlab("Time (min)") + ylab("Signal") + labs(fill="MSE") +
@@ -106,8 +106,7 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
     theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
           panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
           plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"), legend.position = "left")
-  dataPlot
-    
+
   # Cues plot
   cueColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3", "KO"="darkblue")
   cuesPlot <- ggplot(cuesGather, aes(x=.5, y=.5)) +
