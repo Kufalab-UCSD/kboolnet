@@ -454,13 +454,12 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
             for value in values:
                 mapping[value] = value
 
-
-    nx.relabel_nodes(graph, mapping, copy=False)
-
     #make label same as id
     for id in mapping:
-        id_label[id] = {'label': id}
+        id_label[id] = {'label': mapping[id]}
     nx.set_node_attributes(graph, id_label)
+
+    nx.relabel_nodes(graph, mapping, copy=False)
 
     #PART 4 OF IMPLEMENTATION - REMOVE ANY LOOPS TO SELF
     for node in graph.nodes():
