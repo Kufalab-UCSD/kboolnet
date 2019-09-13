@@ -42,7 +42,9 @@ option_list = list(
   make_option("--minQuality", action="store", default=NA, type="integer",
               help="Minimum quality for rule to be loaded [default: 0]"),
   make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Folder to which output files will be written [default: ./out/]")
+              help="Folder to which output files will be written [default: ./out/]"),
+  make_option(c("--bin", "-b"), action="store", default=NA, type="integer",
+              help="Bin to use as final timepoint when scoring. 0 = All data after t = 0, 1 = (0, 3], 2 = (3, 30], 3 = (30, 300], 4 = (300, Inf) [default: 0]")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 opt <- opt[!is.na(opt)] # Discard NA values
@@ -65,7 +67,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, MIDASFile=NA, MIDASDriveFile=NA)
+default <- list(modules="", out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, MIDASFile=NA, MIDASDriveFile=NA, bin=0)
 default <- default[!(names(default) %in% names(opt))]
 opt     <- c(opt, default)
 
@@ -130,7 +132,7 @@ if (!(is.na(opt$rxnconDriveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules... ")
-suppressWarnings(stderr <- system2(command = "python3.6", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
+suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
                                                                  "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -142,7 +144,7 @@ cat("Done.", "\n")
 # Pass files to rxncon for processing
 cat("Generating BoolNet files... ")
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-suppressWarnings(stderr <- system2("python3.6", args = c(paste0(rxnconPath, "rxncon2boolnet.py"), modulesFile, "--output",
+suppressWarnings(stderr <- system2("python3", args = c(paste0(rxnconPath, "rxncon2boolnet.py"), modulesFile, "--output",
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
@@ -289,8 +291,8 @@ for (i in 1:rounds) {
     if (cueType == "Inhibitor") roundInhibs <- c(roundInhibs, cueRegex)
   }
   
-  cat(paste0("Round ", i, " of ", rounds, ": simulating with KOs: ", paste0(roundKOs, collapse=","), "; inhibitors: ",
-             paste0(roundInhibs, collapse=","), "; ligands: ", paste0(roundLigs, collapse=",")), "\n")
+  cat(paste0("Round ", i, " of ", rounds, ": simulating with KOs: ", paste0(roundKOs, collapse=", "), "; inhibitors: ",
+             paste0(roundInhibs, collapse=", "), "; ligands: ", paste0(roundLigs, collapse=", ")), "\n")
   
   # Apply KOs
   if (length(roundKOs > 0)) {
@@ -347,76 +349,101 @@ for (i in 1:rounds) {
 
 cat("Simulations complete after", rounds, "rounds.", "\n")
 
-###################### Scoring ###########################
-# For now, we'll create a new MIDAS list from the experimental values and average all
-# datapoints after t=0 into a single datapoint
-avgMIDASlist <- simMIDASlist
-avgMIDASlist$valueSignals[,,1] <- MIDASlist$valueSignals[,,1]
-avgMIDASlist$valueSignals[,,2] <- apply(MIDASlist$valueSignals[,,2:length(MIDASlist$timeSignals)], 1:2, mean, na.rm = TRUE)
-avgMIDASlist$valueSignals[is.nan(avgMIDASlist$valueSignals)] <- NA # Turn all NaNs into NAs
-
-# Create bins and bin names/times
-bins <- list(c(-Inf, 0), c(0,3), c(3, 30), c(30, 300), c(300, Inf)) # These are the bins; for bin c(a, b) timepoints a < t <= b will be averaged
-binNames <- sapply(bins, paste0, collapse="< t <=")
-binTimes <- numeric(length(bins)) # This is for plotting purposes
-for (i in 1:length(bins)) {
-  bin <- bins[[i]]
-  if (bin[1] == -Inf) { # If bin goes from negative infinity to a point, set that point as the time 
-    binTimes[i] <- bin[2]
-  } else if (bin[2] == Inf) { # If bin goes from point to infinity, set point as the time
-    binTimes[i] <- bin[1]
-  } else { # Otherwise, set time as mean of bin points
-    binTimes[i] <- mean(bin)
+###################### Binning ###########################
+# Bin the data if binning was requested (i.e. --bin != 0)
+if (opt$bin != 0) {
+  # Create bins and bin names/times
+  bins <- list(c(-Inf, 0), c(0,3), c(3, 30), c(30, 300), c(300, Inf)) # These are the bins; for bin c(a, b) timepoints a < t <= b will be averaged
+  binNames <- sapply(bins, paste0, collapse=" < t <= ")
+  binTimes <- numeric(length(bins)) # This is for plotting purposes
+  for (i in 1:length(bins)) {
+    bin <- bins[[i]]
+    if (bin[1] == -Inf) { # If bin goes from negative infinity to a point, set that point as the time 
+      binTimes[i] <- bin[2]
+    } else if (bin[2] == Inf) { # If bin goes from point to infinity, set point as the time
+      binTimes[i] <- bin[1]
+    } else { # Otherwise, set time as mean of bin points
+      binTimes[i] <- mean(bin)
+    }
   }
+  binnedData <- array(dim = c(nrow(MIDASlist$valueCues), length(MIDASlist$namesSignals), length(bins)), # Create array to put binned data together
+                      dimnames = list(1:nrow(MIDASlist$valueCues), MIDASlist$namesSignals, binNames))
+  
+  # Create MIDASlist to store the binned data
+  binMIDASlist <- MIDASlist
+  binMIDASlist$valueVariances <- binnedData
+  binMIDASlist$timeSignals <- binTimes
+  
+  cat("Binning data using bins:", paste0(binNames, collapse=", "), "\n")
+  cat(paste0("Bin #", opt$bin, " (", binNames[opt$bin+1], ") will be used for scoring."), "\n")
+  for (i in 1:length(bins)) {
+    bin <- bins[[i]]
+    binTimes <- MIDASlist$timeSignals > bin[1] & MIDASlist$timeSignals <= bin[2] # Get all the time signals for the bin
+    binArray <- MIDASlist$valueSignals[,,binTimes, drop=F] # Get the data of the bin
+    binnedData[,,i] <- apply(binArray, 1:2, mean, na.rm = TRUE) # Average and store to binnedData
+  }
+  binnedData[is.nan(binnedData)] <- NA
+  binMIDASlist$valueSignals <- binnedData
+  simMIDASlist$timeSignals[2] <- binMIDASlist$timeSignals[opt$bin+1] # Set the simulation time to the bin time
+  
+  # Save only the bins being used for comparison to avgMIDASlist
+  avgMIDASlist <- MIDASlist
+  avgMIDASlist$timeSignals <- binMIDASlist$timeSignals[c(1, opt$bin+1)]
+  avgMIDASlist$valueVariances <- binMIDASlist$valueVariances[,,c(1, opt$bin+1)]
+  avgMIDASlist$valueSignals <- binMIDASlist$valueSignals[,,c(1, opt$bin+1)]
+} else { # If binning not requested, average all data after t = 0 into a single bin
+  cat("Averaging all data after t = 0 for use in scoring.", "\n")
+  avgMIDASlist <- simMIDASlist
+  avgMIDASlist$valueSignals[,,1] <- MIDASlist$valueSignals[,,1]
+  avgMIDASlist$valueSignals[,,2] <- apply(MIDASlist$valueSignals[,,2:length(MIDASlist$timeSignals)], 1:2, mean, na.rm = TRUE)
+  avgMIDASlist$valueSignals[is.nan(avgMIDASlist$valueSignals)] <- NA # Turn all NaNs into NAs
 }
-binnedData <- array(dim = c(nrow(MIDASlist$valueCues), length(MIDASlist$namesSignals), length(bins)), # Create array to put binned data together
-                    dimnames = list(1:nrow(MIDASlist$valueCues), MIDASlist$namesSignals, binNames))
 
-# Create MIDASlist to store the binned data
-binMIDASlist <- MIDASlist
-binMIDASlist$valueVariances <- binnedData
-binMIDASlist$timeSignals <- binTimes
-
-# Bin the data
-for (i in 1:length(bins)) {
-  bin <- bins[[i]]
-  binTimes <- MIDASlist$timeSignals > bin[1] & MIDASlist$timeSignals <= bin[2] # Get all the time signals for the bin
-  binArray <- MIDASlist$valueSignals[,,binTimes, drop=F] # Get the data of the bin
-  binnedData[,,i] <- apply(binArray, 1:2, mean, na.rm = TRUE) # Average and store to binnedData
-}
-binnedData[is.nan(binnedData)] <- NA
-binMIDASlist$valueSignals <- binnedData
-
+####################### Error calculation ###########################
 # Calculate squared errors and create new MIDASlist containing them
-initErr <- (avgMIDASlist$valueSignals[,,1] - simMIDASlist$valueSignals[,,1])^2
+initErr <- (avgMIDASlist$valueSignals[,,1] - avgMIDASlist$valueSignals[,,1])^2
 finalErr <- (avgMIDASlist$valueSignals[,,2] - simMIDASlist$valueSignals[,,2])^2
 avgErr <- apply(array(c(unlist(initErr), unlist(finalErr)), dim=c(nrow(initErr), ncol(initErr), 2)), 1:2, mean, na.rm = TRUE)
 avgErr[is.nan(avgErr)] <- NA # Turn all NaNs into NAs
 
 cat("Mean square error for initial timepoint: ", mean(initErr, na.rm = TRUE), "\n")
 cat("Mean square error for final timepoint: ", mean(finalErr, na.rm = TRUE), "\n")
-cat("Mean square error for all data:", mean(avgErr, na.rm = TRUE), "\n")
+cat("Mean square error for all data:", mean(c(unlist(initErr), unlist(finalErr)), na.rm = TRUE), "\n")
 
 ##################### Plot and save data ##############################
-# Plots
+# Plot setup
 cat("Generating plots... ")
 height = 0.9 * nrow(MIDASlist$valueCues)
 width = 0.3 * (length(MIDASlist$namesSignals) + (4 * length(MIDASlist$namesCues)))
+
+# Experimental data plot
 p <- plotMIDAS(MIDASlist)
-save_plot(paste0(outPath, "Experimental_MIDAS.pdf"), p, base_height = height, base_width = width)
-p <- plotMIDAS(avgMIDASlist)
-save_plot(paste0(outPath, "Experimental_Averaged_MIDAS.pdf"), p, base_height = height, base_width = width)
+ggsave(paste0(outPath, "Experimental_MIDAS.pdf"), p, height = height, width = width)
+
+# Either binned plot or averaged plot
+if (opt$bin != 0) {
+  p <- plotMIDAS(binMIDASlist)
+  ggsave(paste0(outPath, "Experimental_Binned_MIDAS.pdf"), p, height = height, width = width)
+} else {
+  p <- plotMIDAS(avgMIDASlist)
+  ggsave(paste0(outPath, "Experimental_Averaged_MIDAS.pdf"), p, height = height, width = width)
+}
+
+# Simulation data plot
 p <- plotMIDAS(simMIDASlist)
-save_plot(paste0(outPath, "Simulation_MIDAS.pdf"), p, base_height = height, base_width = width)
+ggsave(paste0(outPath, "Simulation_MIDAS.pdf"), p, height = height, width = width)
+
+# Comparison plot
 p <- plotMIDASComp(avgMIDASlist, simMIDASlist, avgErr)
-save_plot(paste0(outPath, "Comparison_MIDAS.pdf"), p, base_height = height, base_width = width)
+ggsave(paste0(outPath, "Comparison_MIDAS.pdf"), p, height = height, width = width)
 cat("Done.", "\n")
 
 
 # Save MIDAS lists in RDS files
 cat("Saving data... ")
 saveRDS(MIDASlist, file = paste0(outPath, "Experimental_MIDAS.rds"))
-saveRDS(avgMIDASlist, file = paste0(outPath, "Experimental_Averaged_MIDAS.rds"))
+if (opt$bin != 0) saveRDS(binMIDASlist, file = paste0(outPath, "Experimental_Binned_MIDAS.rds"))
+if (opt$bin == 0) saveRDS(avgMIDASlist, file = paste0(outPath, "Experimental_Averaged_MIDAS.rds"))
 saveRDS(simMIDASlist, file = paste0(outPath, "Simulation_MIDAS.rds"))
 
 cat("Done.", "\n")
