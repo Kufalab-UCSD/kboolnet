@@ -401,15 +401,15 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
             complex_states = [state.name for state in cluster if not state.name in unbound_states] # Get all complexed states
 
             for complex_state in complex_states: # Apply the edges for each complex to all unbound states
-                for unbound_state in unbound_states:
-                    add_inverted_edges(complex_state, unbound_state)
+                # for unbound_state in unbound_states:
+                #     add_inverted_edges(complex_state, unbound_state)
 
                 graph.remove_node(complex_state)
                 
             logger.debug('Merged complex states {} into mutually exclusive unbound states {}'.format(complex_states, unbound_states))
         else: # Else, merge all states into highest scoring state
             for node in other_nodes:
-                add_inverted_edges(node, highest_score_node)
+                # add_inverted_edges(node, highest_score_node)
                 graph.remove_node(node)
 
             logger.debug('Merged states {} into mutually exclusive state {}'.format(other_nodes, highest_score_node))
