@@ -169,7 +169,9 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
                 components = re.search(r'(?:([A-Za-z0-9]*)_\[.*?\](?:.*?([A-Za-z0-9]*)_\[.*?\])?|^[A-Za-z0-9]*$)', con['node']).groups() # Get all components in the state
                 components = [component for component in components if component != None] # Discard None components
                 required_components.extend(components) # Append components for state to list of required components
-            logger.debug('Matched contingency {} to node {}, contains components {}'.format(con['modifier'], con['node'], components))
+                logger.debug('Matched contingency {} to node {}, contains components {}'.format(con['modifier'], con['node'], components))
+            else: # If a boolean node or global state
+                logger.debug('Matched contingency {} to node {}'.format(con['modifier'], con['node']))
 
     ### STEP 3: For each filtered contingency (ie a state), add reaction(s) that produce(s) state to list (also add target reactions)
     required_components = list(set(required_components)) # Make sure there are no duplicate components
