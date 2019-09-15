@@ -118,6 +118,10 @@ ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
 # Same for inhibitors
 inhib <- trimws(strsplit(opt$inhib, ",")[[1]])
 
+# Escape inhibitor regexes
+inhib <- gsub('([.|()\\^{}+$?]|\\[|\\])', '\\\\\\1', inhib)
+inhib <- gsub('\\*', '\\.\\*\\?', inhib)
+
 # Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
   stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
