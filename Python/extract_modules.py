@@ -61,19 +61,33 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     rxn_sheet = excel_book._xlrd_book.sheet_by_name('ReactionList')
 
     # Get module and quality column numbers for each sheet
+    column_rxn_module = None
+    column_rxn_quality = None
     rxn_header_row = list(rxn_sheet.get_rows())[1]
     for num, header in enumerate(rxn_header_row):
         if header.value == '!Module':
             column_rxn_module = num
         elif header.value == '!Quality':
             column_rxn_quality = num
+
+    if column_rxn_module is None:
+        raise ValueError('You must define a !Module column in the ReactionList sheet.')
+    elif column_rxn_quality is None:
+        raise ValueError('You must define a !Quality column in the ReactionList sheet.')
     
+    column_con_module = None
+    column_con_quality = None
     con_header_row = list(con_sheet.get_rows())[1]
     for num, header in enumerate(con_header_row):
         if header.value == '!Module':
             column_con_module = num
         elif header.value == '!Quality':
             column_con_quality = num
+
+    if column_con_module is None:
+        raise ValueError('You must define a !Module column in the ContingencyList sheet.')
+    elif column_con_quality is None:
+        raise ValueError('You must define a !Quality column in the ContingencyList sheet.')
 
     # Filter rxn rows by module tag and min quality
     rxn_rows = [row for row in rxn_sheet.get_rows()][2:]
