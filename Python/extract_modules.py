@@ -118,7 +118,9 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     for num, row in enumerate(con_rows):
         row_modules = list(map(str.strip, row[column_con_module].value.split(','))) # Split modules into list and trim whitespace
         
-        if not row[column_con_quality].value == '': # If quality missing, keep the row
+        if row[excel_book._column_contingency_modifier].value == '': # If empty row, skip it
+            continue
+        elif not row[column_con_quality].value == '': # If quality missing, keep the row
             try: # Try and parse quality to an int
                 row_quality = int(row[column_con_quality].value)
             except ValueError:
