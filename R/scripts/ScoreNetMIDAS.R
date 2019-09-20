@@ -10,6 +10,7 @@
 
 ################# Library loading ##################
 options(stringsAsFactors = F)
+options(warn = 1)
 suppressMessages(library(BoolNet))
 suppressMessages(library(ggplot2))
 suppressMessages(library(dplyr))
@@ -253,7 +254,9 @@ for (lig in ligNodes) {
 # Map namesSignals to rxncon nodes
 signalMapping <- list()
 for (i in 1:length(MIDASlist$namesSignals)) {
-  signalMapping <- c(signalMapping, list(symbolMapping$name[grepl(MIDASlist$regexSignals[i], symbolMapping$name)]))
+  signalNodes <- symbolMapping$name[grepl(MIDASlist$regexSignals[i], symbolMapping$name)]
+  cat("Signal", MIDASlist$namesSignals[i], "mapped to node(s)", paste0(signalNodes, collapse=", "), "\n")
+  signalMapping <- c(signalMapping, list(signalNodes))
 }
 
 ####################### Simulate #########################
