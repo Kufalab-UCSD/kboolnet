@@ -404,7 +404,7 @@ if (opt$bin != 0) {
 
 ####################### Error calculation ###########################
 # Calculate squared errors and create new MIDASlist containing them
-initErr <- (avgMIDASlist$valueSignals[,,1] - avgMIDASlist$valueSignals[,,1])^2
+initErr <- (avgMIDASlist$valueSignals[,,1] - simMIDASlist$valueSignals[,,1])^2
 finalErr <- (avgMIDASlist$valueSignals[,,2] - simMIDASlist$valueSignals[,,2])^2
 avgErr <- apply(array(c(unlist(initErr), unlist(finalErr)), dim=c(nrow(initErr), ncol(initErr), 2)), 1:2, mean, na.rm = TRUE)
 avgErr[is.nan(avgErr)] <- NA # Turn all NaNs into NAs
