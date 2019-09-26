@@ -60,7 +60,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     con_sheet = excel_book._xlrd_book.sheet_by_name('ContingencyList')
     rxn_sheet = excel_book._xlrd_book.sheet_by_name('ReactionList')
 
-    # Get module and quality column numbers for each sheet
+    # Get module and quality column numbers for reactions
     column_rxn_module = None
     column_rxn_quality = None
     rxn_header_row = list(rxn_sheet.get_rows())[1]
@@ -75,6 +75,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     elif column_rxn_quality is None:
         raise ValueError('You must define a !Quality column in the ReactionList sheet.')
     
+    # Get module and quality column numbers for contingencies
     column_con_module = None
     column_con_quality = None
     con_header_row = list(con_sheet.get_rows())[1]
@@ -100,7 +101,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
             try: # Try and parse quality to an int
                 row_quality = int(row[column_rxn_quality].value)
             except ValueError:
-                raise SyntaxError('Reaction {}\'s quality must be an int.'.format(row[excel_book._column_reaction_full_name].value))
+                raise TypeError('Reaction {}\'s quality must be an int.'.format(row[excel_book._column_reaction_full_name].value))
             
             if row_quality < min_quality: # If less than minimum quality skip row
                 logger.debug('Skipping reaction row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
@@ -124,7 +125,7 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
             try: # Try and parse quality to an int
                 row_quality = int(row[column_con_quality].value)
             except ValueError:
-                raise SyntaxError('Contingency {}\'s quality must be an int.'.format(num))
+                raise TypeError('Contingency {}\'s quality must be an int.'.format(num))
             
             if row_quality < min_quality: # If less than minimum quality skip row
                 logger.debug('Skipping contingency row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
