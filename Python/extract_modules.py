@@ -14,6 +14,10 @@ from rxncon.visualization.regulatory_graph import SpeciesReactionGraph
 from rxncon.visualization.graphML import XGMML
 from rxncon.visualization.graphML import map_layout2xgmml
 
+from rxncon.core.state import state_from_str, GLOBAL_STATE_REGEX
+from rxncon.core.effector import BOOLEAN_CONTINGENCY_REGEX
+from rxncon.core.reaction import BIDIRECTIONAL_REACTIONS
+
 import networkx as nx
 from networkx import DiGraph
 
@@ -50,10 +54,6 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     rxncon_system = excel_book.rxncon_system
     print('Constructed rxncon system: [{} reactions], [{} contingencies]'
           .format(len(rxncon_system.reactions), len(rxncon_system.contingencies)))
-
-    print('Generating regulatory graph output...')
-    reg_system = SpeciesReactionGraph(rxncon_system)
-    graph = reg_system.to_graph()
 
     ### STEP 1: Get all the reactions and contingencies and filter down to only those with module tag + minimum quality
     # Get the sheets
@@ -135,104 +135,108 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
             continue
         else:
             con_filtered.append({'row_num': num, 'target': row[excel_book._column_contingency_target].value.strip(),
-                                 'modifier': row[excel_book._column_contingency_modifier].value.strip()})
+                                 'modifier': row[excel_book._column_contingency_modifier].value.strip(),
+                                 'type': row[excel_book._column_contingency_type].value.strip()})
 
-    ### STEP 2: Map contingencies to nodes
+    ### STEP 1.5: Make sure boolean contingencies have inputs; if not, raise an error
+    boolean_modifiers = [con['modifier'] for con in con_filtered if re.match(BOOLEAN_CONTINGENCY_REGEX, con['modifier'])]
+    boolean_targets = [con['modifier'] for con in con_filtered if re.match(BOOLEAN_CONTINGENCY_REGEX, con['modifier'])]
+
+    for modifier in boolean_modifiers:
+        if not modifier in boolean_targets:
+            raise ValueError('Boolean gate {} has no inputs in filtered contingencies'.format(modifier))
+
+    ### STEP 2 (New method): Map modifiers to rxncon states
     required_components = []
     for con in con_filtered:
-        row = con_rows[con['row_num']]
-        con['node'] = ''
+        if re.match(BOOLEAN_CONTINGENCY_REGEX, con['modifier']): # If contingency modifier is a boolean state, skip it
+            con['modifier_states'] = []
+            continue
 
-        if con['modifier'] in graph.node: # If modifier directly found in graph
-            con['node'] = con['modifier']
-        if re.search(r'.*\[.*\]--.*\[.*\](?!0$)', con['modifier']): # If modifier is a complex (with domains)
-            components = con['modifier'].split('--')
-            con['node'] = components[0] + '--' + components[1]
-            if not con['node'] in graph.nodes: # Try and reverse the complex if that didn't work
-                con['node'] = components[1] + '--' + components[0]
-        elif re.search(r'[A-Za-z0-9]+--[A-Za-z0-9]+', con['modifier']): # If modifier is a complex (no domains)
-            components = con['modifier'].split('--')
-            r = re.compile(components[0] + r'_\[.*?\]--' + components[1] + r'_\[.*?\]') # Try and modifier with domains
-            matches = list(filter(r.match, list(graph.nodes.keys())))
+        orig_modifier_state = state_from_str(con['modifier']) # Get the state based on the string
+        modifier_states = [state for state in rxncon_system.states if state.is_subset_of(orig_modifier_state)] # Find the states in the system that state refers to
+        
+        if not modifier_states:
+            raise ValueError('Could not match contingency {} to a state in the rxncon system'.format(con['modifier']))
 
-            if len(matches) == 1:
-                con['node'] = matches[0]
-            elif len(matches) == 0: # If that fails, try the other order
-                r = re.compile(components[1] + r'_\[.*?\]--' + components[0] + r'_\[.*?\]') 
-                matches = list(filter(r.match, list(graph.nodes.keys())))
+        con['modifier_states'] = modifier_states
+        for state in modifier_states:
+            required_components.extend(state.components)
 
-                if len(matches) == 1:
-                    con['node'] = matches[0]
-        elif re.search(r'<.*>', con['modifier']): # If modifier is a boolean node
-            con['node'] = con['modifier'][1:len(con['modifier'])-1] # Trim out the brackets
-        elif re.search(r'[A-Za-z0-9]+-{.*}', con['modifier']): # If modifier is a modification (no domains)
-            components = con['modifier'].split('-')
-            r = re.compile(components[0] + r'_\[.*\]-' + components[1], re.IGNORECASE)
-            matches = list(filter(r.match, list(graph.nodes.keys())))
+    ### STEP 3 (New method): For each filtered contingency (ie a state), add reaction(s) that produce(s) state to list (also add target reactions)
+    def unsplit_bidirectional_reaction_str(rxn_str: str) -> str:
+        for verb in BIDIRECTIONAL_REACTIONS:
+            if ('_{}+_'.format(verb).lower() in rxn_str.lower() or
+                    '_{}-_'.format(verb).lower() in rxn_str.lower()): # If reaction is in format _verb+_ or _verb-_
+                new_rxn_str = re.sub('(?i)_{}._'.format(verb), '_{}_'.format(verb), rxn_str) # Replace with _verb_
+                return new_rxn_str
 
-            if len(matches) == 1:
-                con['node'] = matches[0]
-        else: # Try case insensitive search
-            r = re.compile(re.escape(con['modifier']), re.IGNORECASE)
-            matches = list(filter(r.match, list(graph.nodes.keys())))
+        return rxn_str
 
-            if len(matches) == 1:
-                con['node'] = matches[0]
-
-        if not con['node'] in graph.node:
-            raise ValueError('Unable to match contingency {} to a node in the srgraph.'.format(con['modifier']))
-        else:
-            if not re.search(r'^(<.*>|\[.*\])$', con['modifier']): # If not a boolean node or a global state
-                components = re.search(r'(?:([A-Za-z0-9]*)_\[.*?\](?:.*?([A-Za-z0-9]*)_\[.*?\])?|^[A-Za-z0-9]*$)', con['node']).groups() # Get all components in the state
-                components = [component for component in components if component != None] # Discard None components
-                required_components.extend(components) # Append components for state to list of required components
-                logger.debug('Matched contingency {} to node {}, contains components {}'.format(con['modifier'], con['node'], components))
-            else: # If a boolean node or global state
-                logger.debug('Matched contingency {} to node {}'.format(con['modifier'], con['node']))
-
-    ### STEP 3: For each filtered contingency (ie a state), add reaction(s) that produce(s) state to list (also add target reactions)
     required_components = list(set(required_components)) # Make sure there are no duplicate components
     required_reactions = []
     for con in con_filtered:
-        if not re.search(r'^(<.*>|\[.*\])$', con['target']): # If target not a global state or boolean node, add it
-            required_reactions.append(con['target'])
+        con_reactions = [] # List to store reactions producing/synthesizing contingency reactions
+        con_required_reactions = [] # List to store which reactions will be added to satisfy contingency
 
-        if graph.nodes(data='type')[con['node']] == 'state':
-            con_reactions = [r for r in graph.predecessors(con['node'])]
-            con_required_reactions = []
+        # If target not a global state or boolean node (i.e. target is a reaction), add it to list of required reactions
+        if not (re.match(BOOLEAN_CONTINGENCY_REGEX, con['target']) or re.match(GLOBAL_STATE_REGEX, con['target'])):
+            required_reactions.append(unsplit_bidirectional_reaction_str(con['target']))
 
-            for reaction in con_reactions: # For all of the reactions that produce that state
-                reaction_components = re.search(r'([A-Za-z0-9]*)(?:_\[.*\])?_.*?_([A-Za-z0-9]*)(?:_\[.*\])?', reaction).group(1,2) # Get both the components involved in the reaction
-                if reaction_components[0] in required_components and reaction_components[1] in required_components:
-                    con_required_reactions.append(reaction) # If both components of reaction are required components, add to con_required_reactions
+        for state in con['modifier_states']: # For each state contingency modifier matched to
+            for reaction in rxncon_system.reactions:
+                if (any([produced_state.is_subset_of(state) for produced_state in reaction.produced_states]) or # If a reaction produces the state
+                        any([synthesised_state.is_subset_of(state) for synthesised_state in reaction.synthesised_states])): # or synthesizes the state
+                    con_reactions.append(reaction) # Add it to the list of reactions for the contingency
+        
+        # Try and find if reaction producing state already in filtered reactions
+        for reaction in con_reactions: 
+            rxn_name = unsplit_bidirectional_reaction_str(reaction.name) # Turn bidirectional reactions like ppi+ or ppi- into ppi
+            rxn_name_no_domains = re.sub(r'_\[.*?\]', '', rxn_name) # Also check name of reaction without domains
+            if [filtered_reaction for filtered_reaction in rxn_filtered if (
+                                                                            filtered_reaction['name'] == rxn_name or
+                                                                            filtered_reaction['name'] == rxn_name_no_domains
+                                                                           )]:
+                con_required_reactions.append(rxn_name)
+        
+        # If an already filtered reaction wasn't found, first try adding reaction involving only required components
+        if not con_required_reactions: 
+            for reaction in con_reactions:
+                rxn_name = unsplit_bidirectional_reaction_str(reaction.name) # Turn bidirectional reactions like ppi+ or ppi- into ppi
+                if all(component in required_components for component in reaction.components): # Check that all reaction components are in required_components
+                    logger.warning('Adding reaction {} to satisfy contingency {} {} {}'.format(rxn_name, con['target'], con['type'], con['modifier'])) 
+                    con_required_reactions.append(rxn_name)
 
-            if len(con_required_reactions) > 0: # If reaction producing state that only involves require components found, add it to required reactions
-                required_reactions.extend(con_required_reactions)
-            else: # Otherwise just add all the reactions that produce that state
-                required_reactions.extend(con_reactions)
-    required_reactions = list(dict.fromkeys(required_reactions))
+        # If a reaction still wasn't found, add all reactions producing the contingency modifier
+        if not con_required_reactions:
+            for reaction in con_reactions:
+                rxn_name = unsplit_bidirectional_reaction_str(reaction.name)
+                logger.warning('Adding reaction {} to satisfy contingency {} {} {}'.format(rxn_name, con['target'], con['type'], con['modifier'])) 
+                con_required_reactions.append(rxn_name)
+
+        required_reactions.extend(con_required_reactions)
 
     ### STEP 4: Check if required reactions already in rxn_filtered and add them if missing
-    all_rxns = rxn_sheet.col_values(excel_book._column_reaction_full_name)[2:] # Get list of all reaction names
-    rxn_names = [d['name'] for d in rxn_filtered]
-    for node in required_reactions:
-        bidirectional = re.sub(r'[+-](?=_.*?)', '', node)
-        no_domain = re.sub(r'_\[.*?\]', '', node)
-        no_domain_bidirectional = re.sub(r'_\[.*?\]', '', bidirectional)
-
-        # Check if node exists in rxn_filtered and skip it if it does
-        if node in rxn_names or no_domain in rxn_names or bidirectional in rxn_names or no_domain_bidirectional in rxn_names:
+    all_rxn_names = rxn_sheet.col_values(excel_book._column_reaction_full_name)[2:] # Get list of all reaction names
+    rxn_filtered_names = [d['name'] for d in rxn_filtered]
+    required_reactions = list(set(required_reactions)) # Make sure there are no duplicate reactions
+    added_reactions = []
+    for required_rxn_name in required_reactions:
+        # Check if reaction exists in rxn_filtered and skip it if it does
+        required_rxn_name_no_domains = re.sub(r'_\[.*?\]', '', required_rxn_name) # Also check name of reaction without domains
+        if required_rxn_name in rxn_filtered_names or required_rxn_name_no_domains in rxn_filtered_names:
             continue
 
         # If node not in rxn_filtered, try and find the matching reaction and add it to rxn_filtered
-        for num, rxn in enumerate(all_rxns):
-            if node == rxn or bidirectional == rxn or no_domain == rxn or no_domain_bidirectional == rxn:
-                logger.warning('Added required reaction {} to filtered reactions.'.format(rxn, node))
-                rxn_filtered.append({'name': rxn, 'row_num': num})
-                break
+        for num, rxn_name in enumerate(all_rxn_names):
+            if required_rxn_name == rxn_name or required_rxn_name_no_domains == rxn_name:
+                logger.warning('Added required reaction {} to filtered reactions.'.format(rxn_name))
+                added_reactions.append({'name': rxn_name, 'row_num': num})
 
-            if num == len(all_rxns)-1:
-                raise ValueError('Unable to find reaction that matches node {}'.format(node))
+        if not added_reactions:
+            raise ValueError('Unable to find reaction {}'.format(required_rxn_name))
+
+    rxn_filtered.extend(added_reactions)
 
     ### STEP 5: Write updated lists to excel file. This has to be done with openpyxl as xlrd/xlwt don't really support xlsx
     # NOTE: openpyxl is 1-indexed, not 0-indexed like xlrd
