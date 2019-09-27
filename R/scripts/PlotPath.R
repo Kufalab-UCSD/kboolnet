@@ -79,17 +79,6 @@ path <- read.csv(opt$file, header=TRUE)
 rownames(path) <- path[,1]
 path <- path[,2:ncol(path), drop=F]
 
-# Remove domain names if requested
-if (opt$nodomains) {
-  newNames <- gsub("_\\[.*?\\]", "", rownames(path))
-  
-  # If there are ambigious names due to domain simplification, replace them with the old names
-  ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
-  newNames[ambigNames] <- rownames(path)[ambigNames]
-  
-  rownames(path) <- newNames
-}
-
 # Keep only the nodes that are wanted
 if (length(nodes > 0)) {
   # First, check that every nodes argument actually exists in the path
@@ -99,6 +88,17 @@ if (length(nodes > 0)) {
   
   # Get indices of nodes to keep and only keep them
   path <- path[nodes, ,drop=F]
+}
+
+# Remove domain names if requested
+if (opt$nodomains) {
+  newNames <- gsub("_\\[.*?\\]", "", rownames(path))
+  
+  # If there are ambigious names due to domain simplification, replace them with the old names
+  ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
+  newNames[ambigNames] <- rownames(path)[ambigNames]
+  
+  rownames(path) <- newNames
 }
 
 plotPath(path, opt$out, ratio=opt$ratio)
