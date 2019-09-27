@@ -10,16 +10,10 @@ import click_log
 import colorama
 
 from rxncon.input.excel_book.excel_book import ExcelBook
-from rxncon.visualization.regulatory_graph import SpeciesReactionGraph
-from rxncon.visualization.graphML import XGMML
-from rxncon.visualization.graphML import map_layout2xgmml
 
 from rxncon.core.state import state_from_str, GLOBAL_STATE_REGEX
 from rxncon.core.effector import BOOLEAN_CONTINGENCY_REGEX
 from rxncon.core.reaction import BIDIRECTIONAL_REACTIONS
-
-import networkx as nx
-from networkx import DiGraph
 
 from openpyxl import load_workbook
 
