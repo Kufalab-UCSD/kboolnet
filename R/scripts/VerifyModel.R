@@ -134,9 +134,9 @@ if (opt$minQuality < 0) {
   stop("minQuality must be >= 0")
 }
 
-maxrounds <- opt$maxrounds
-if (opt$maxrounds < 2) {
-  stop("maxrounds must be >= 2")
+maxrounds <- opt$rounds
+if (opt$rounds < 2) {
+  stop("rounds must be >= 2")
 }
 
 ################ Load and process rxncon file ###################
