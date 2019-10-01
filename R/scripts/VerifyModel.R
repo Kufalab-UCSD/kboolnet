@@ -37,6 +37,39 @@ plotCompMat <- function(mat) {
   return(p)
 }
 
+getPathAndAttractor <- function(network, states, names) {
+  path <- getPathToAttractor(network, states) %>% t() # Simulate the path
+  rownames(path) <- names
+  states <- path[,ncol(path)] # Use last path state as new start for attractor
+  attractor <- getPathToAttractor(network, states) %>% t() # Get the attractor
+  attractor <- attractor[,1:(ncol(attractor)-1), drop=FALSE] # Remove last repeated column from attractor
+  rownames(attractor) <- names
+  
+  return(list("path" = path, "attractor" = attractor))
+}
+
+simulateWithLigands <- function(network, states, names, ligands) {
+  # Add ligands in fully neutral state
+  for (lig in 1:length(ligands)){
+    states[grepl(paste0(ligands[lig], "_.*--0$"), names)] <- 1
+    states[grepl(paste0(ligands[lig], "_.*-\\{0\\}$"), names)] <- 1
+  }
+  
+  # Simulate and return
+  return(getPathAndAttractor(network, states, names))
+}
+
+simulateWithoutLigands <- function(network, states, names, ligands) {
+  # Unbind ligands from complexes and remove any ligand
+  for (lig in 1:length(ligands)){
+    states <- unbindLigand(ligands[lig], names, states)
+    states[names %in% ligNodesNames] <- 0
+  }
+  
+  # Simulate and return
+  return(getPathAndAttractor(network, states, names))
+}
+
 ################# Argument parsing #################
 # Get commandline args
 option_list = list(
@@ -233,37 +266,88 @@ scoreNoLig <- matrix(nrow = maxrounds, ncol = maxrounds)
 
 # Simulation rounds
 cat("Starting simulations...", "\n")
-rounds <- 0
-for (i in 1:maxrounds) {
+rounds <- 1
+
+# First round to set things up
+cat("Simulation round 1 ... ")
+noLigResults <- simulateWithoutLigands(network, initStates$state, initStates$name, ligands)
+noLigAttr[[1]] <- noLigResults$attractor
+noLigPath[[1]] <- noLigResults$path
+ligResults <- simulateWithLigands(network, noLigAttr[[1]][,ncol(noLigAttr[[1]])], initStates$name, ligands)
+ligAttr[[1]] <- ligResults$attractor
+ligPath[[1]] <- ligResults$path
+scoreLig[1,1] <- 1
+scoreNoLig[1,1] <- 1
+cat("Done.", "\n")
+
+for (i in 2:maxrounds) {
   rounds <- rounds + 1
+  cat("Simulation round", rounds, "... ")
   
-  # Unbind ligands from complexes and remove any ligand
-  for (lig in 1:length(ligands)){
-    initStates$state <- unbindLigand(ligands[lig], initStates$name, initStates$state)
-    initStates$state[initStates$name %in% ligNodesNames] <- 0
+  roundLigAttr   <- list()
+  roundLigPath    <- list()
+  roundNoLigAttr <- list()
+  roundNoLigPath  <- list()
+  
+  # Simulate without ligand using each state of previous w/ ligand attractor as an initial state
+  for (j in 1:ncol(ligAttr[[i-1]])) {
+    res <- simulateWithoutLigands(network, ligAttr[[i-1]][,j], initStates$name, ligands)
+    roundNoLigAttr[[j]] <- res$attractor
+    roundNoLigPath[[j]] <- res$path
   }
   
-  # Simulate w/out ligand
-  noLigPath[[i]]    <- getPathToAttractor(network, initStates$state) %>% t()
-  rownames(noLigPath[[i]]) <- initStates$name
-  initStates$state  <- noLigPath[[i]][,ncol(noLigPath[[i]])] # Get only attractor of no lig path
-  noLigAttr[[i]]    <- getPathToAttractor(network, initStates$state) %>% t()
-  noLigAttr[[i]]      <- noLigAttr[[i]][,1:(ncol(noLigAttr[[i]])-1), drop=FALSE]
-  rownames(noLigAttr[[i]]) <- initStates$name
-  
-  # Add ligands in fully neutral state
-  for (lig in 1:length(ligands)){
-    initStates$state[grepl(paste0(ligands[lig], "_.*--0$"), initStates$name)] <- 1
-    initStates$state[grepl(paste0(ligands[lig], "_.*-\\{0\\}$"), initStates$name)] <- 1
+  # Compare no ligand attractors to each other
+  roundNoLigCompScores <- matrix(nrow = length(roundNoLigAttr), ncol = length(roundNoLigAttr))
+  for (j in 1:length(roundNoLigAttr)) {
+    for (k in j:length(roundNoLigAttr)) {
+      roundNoLigCompScores[j,k] <- compMatrix(roundNoLigAttr[[j]], roundNoLigAttr[[k]])
+    }
   }
   
-  # Simulate w/ ligand
-  ligPath[[i]]      <- getPathToAttractor(network, initStates$state) %>% t()
-  rownames(ligPath[[i]]) <- initStates$name
-  initStates$state  <- ligPath[[i]][,ncol(ligPath[[i]])] # Get only attractor of no lig path
-  ligAttr[[i]]      <- getPathToAttractor(network, initStates$state) %>% t()
-  ligAttr[[i]]      <- ligAttr[[i]][,1:(ncol(ligAttr[[i]])-1), drop=FALSE] # Remove last repeated column from attractor
-  rownames(ligAttr[[i]]) <- initStates$name
+  if (any(roundNoLigCompScores != 1, na.rm=T)) { # If dissimilar attractors found
+    warning("No-ligand attractors in round ", rounds, " are not consistent, possibly indicating \"trap\" states! Using most dissimilar attractor to continue.")
+    # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
+    roundNoLigScores <- numeric(length(roundNoLigAttr))
+    for (j in 1:length(roundNoLigAttr)) {
+      roundNoLigScores[j] <- compMatrix(roundNoLigAttr[[j]], noLigAttr[[i-1]])
+    }
+    noLigAttr[[i]] <- roundNoLigAttr[[which.min(roundNoLigScores)]]
+    noLigPath[[i]] <- roundNoLigPath[[which.min(roundNoLigScores)]]
+  } else { # Else just save the first one
+    noLigAttr[[i]] <- roundNoLigAttr[[1]]
+    noLigPath[[i]] <- roundNoLigPath[[1]]
+  }
+  
+  # Simulate with ligand using each state of previous no ligand attractor as an initial state
+  for (j in 1:ncol(noLigAttr[[i]])) {
+    res <- simulateWithLigands(network, noLigAttr[[i]][,j], initStates$name, ligands)
+    roundLigAttr[[j]] <- res$attractor
+    roundLigPath[[j]] <- res$path
+  }
+  
+  # Compare with ligand attractors to each other
+  roundLigCompScores <- matrix(nrow = length(roundLigAttr), ncol = length(roundLigAttr))
+  for (j in 1:length(roundLigAttr)) {
+    for (k in j:length(roundLigAttr)) {
+      roundLigCompScores[j,k] <- compMatrix(roundLigAttr[[j]], roundLigAttr[[k]])
+    }
+  }
+  
+  if (any(roundLigCompScores != 1, na.rm=T)) { # If dissimilar attractors found
+    warning("With-ligand attractors in round ", rounds, " are not consistent, possibly indicating \"trap\" states! Using most dissimilar attractor to continue.")
+    # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
+    roundLigScores <- numeric(length(roundLigAttr))
+    for (j in 1:length(roundLigAttr)) {
+      roundLigScores[j] <- compMatrix(roundLigAttr[[i]], ligAttr[[i-1]])
+    }
+    ligAttr[[i]] <-roundLigAttr[[which.min(roundLigScores)]]
+    ligPath[[i]] <-roundLigPath[[which.min(roundLigScores)]]
+  } else { # Else just save the first one
+    ligAttr[[i]] <- roundLigAttr[[1]]
+    ligPath[[i]] <- roundLigPath[[1]]
+  }
+  
+  cat("Done.", "\n")
   
   # Compare this round of simulation to previous rounds
   for (j in 1:rounds) {
