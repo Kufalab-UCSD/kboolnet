@@ -270,6 +270,8 @@ cat("Generating plots... ")
 results <- as.data.frame(results)
 results$num <- 1:nrow(results)
 resultsGather <- gather(results, "signal", "value", -num)
+resultsGather$color[resultsGather$value > 0.5] <- "white"
+resultsGather$color[resultsGather$value <= 0.5] <- "black"
 
 # Do the same for inputs
 combinations <- as.data.frame(combinations)
@@ -298,6 +300,8 @@ inputPlot <- ggplot(combinationsGather, aes(x=.5, y=.5)) +
 resultsPlot <- ggplot(resultsGather, aes(x=.5, y=.5)) +
   facet_grid(cols=vars(signal), rows=vars(num)) +
   geom_tile(aes(fill=value), colour="black", size=1) + # Create the tiles (colour and size affect borders)
+  geom_text(aes(color=color, label=format(value, nsmall=2, digits=2))) + # Label the values on the plot
+  scale_color_manual(values=c("black"="black", "white"="white"), guide="none") + # Color the labels
   scale_fill_gradient(limits=c(0,1), low="white", high="steelblue") + # Color the tiles appropriately
   scale_x_continuous(limits=c(0,1), expand=c(0,0)) + scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
   theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank(), # Remove axis labels
@@ -308,8 +312,8 @@ resultsPlot <- ggplot(resultsGather, aes(x=.5, y=.5)) +
 widths = c(ncol(combinations), ncol(results)*3)
 p <- suppressWarnings(suppressMessages(ggarrange(inputPlot, resultsPlot, widths = widths, nrow = 1, ncol = 2)))
 
-height = 0.9 * nrow(results)
-width =  0.3 * (ncol(combinations) + ncol(results) * 3)
+height = 1.1 * nrow(results)
+width =  0.25 * (ncol(combinations) + ncol(results) * 3)
 ggsave(plot=p, device="pdf", paste0(outPath, "truth_table.pdf"), height = height, width = width)
 
 cat("Done.", "\n")
