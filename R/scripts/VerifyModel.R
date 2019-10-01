@@ -37,17 +37,6 @@ plotCompMat <- function(mat) {
   return(p)
 }
 
-getPathAndAttractor <- function(network, states, names) {
-  path <- getPathToAttractor(network, states) %>% t() # Simulate the path
-  rownames(path) <- names
-  states <- path[,ncol(path)] # Use last path state as new start for attractor
-  attractor <- getPathToAttractor(network, states) %>% t() # Get the attractor
-  attractor <- attractor[,1:(ncol(attractor)-1), drop=FALSE] # Remove last repeated column from attractor
-  rownames(attractor) <- names
-  
-  return(list("path" = path, "attractor" = attractor))
-}
-
 simulateWithLigands <- function(network, states, names, ligands) {
   # Add ligands in fully neutral state
   for (lig in 1:length(ligands)){
@@ -138,6 +127,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/compMatrix.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/inhibitedNetwork.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])

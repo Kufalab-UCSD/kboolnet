@@ -305,12 +305,7 @@ for (i in 1:rounds) {
   }
   
   # Initial simulation to neutral state (t = 0)
-  neutralPath <- t(getPathToAttractor(KOnetwork, initStates$state))
-  neutralPath <- as.data.frame(neutralPath)
-  rownames(neutralPath) <- symbolMapping$name
-  neutralAttr <- t(getPathToAttractor(KOnetwork, neutralPath[,ncol(neutralPath)])) # Use last state of path to find attractor
-  neutralAttr <- as.data.frame(neutralAttr)[,1:(ncol(neutralAttr)-1), drop=FALSE] # Drop last column from attractor
-  rownames(neutralAttr) <- symbolMapping$name
+  neutralAttr <- getPathAndAttractor(KOnetwork, initStates$state, symbolMapping$name)$attractor
   
   # Use last neutral state as a new initial state
   newInitStates <- initStates
@@ -331,12 +326,7 @@ for (i in 1:rounds) {
   }
   
   # Simulate to final state
-  finalPath <- t(getPathToAttractor(inhibNetwork, newInitStates$state))
-  finalPath <- as.data.frame(finalPath)
-  rownames(finalPath) <- symbolMapping$name
-  finalAttr <- t(getPathToAttractor(KOnetwork, finalPath[,ncol(finalPath)])) # Use last state of path to find attractor
-  finalAttr <- as.data.frame(finalAttr)[,1:(ncol(finalAttr)-1), drop=FALSE] # Drop last column from attractor
-  rownames(finalAttr) <- symbolMapping$name
+  finalAttr <- getPathAndAttractor(inhibNetwork, newInitStates$state, symbolMapping$name)$attractor
   
   # Save simulation data to simMIDASlist
   for (j in 1:length(MIDASlist$namesSignals)) {
