@@ -207,16 +207,20 @@ def write_xgmml(excel_filename: str, outnode, output=None, layout_template_file=
                 for target in targets:
                     source_interaction = interactions[(source, node)]
                     target_interaction = interactions[(node, target)]
-                    if (source_interaction == '!' or source_interaction == 'is' or source_interaction == 'ss' or source_interaction == '+') and (target_interaction == 'produce' or target_interaction == 'synthesis'):
+                    positive_source_interactions = ['!', 'is', 'ss', '+']
+                    negative_source_interactions = ['x', '-']
+                    positive_target_interactions = ['produce', 'synthesis']
+                    negative_target_interactions = ['consume', 'degrade']
+                    if source_interaction in positive_source_interactions and target_interaction in positive_target_interactions:
                         graph.add_edge(source, target, interaction='+')
-                    elif (source_interaction == '!' or source_interaction == 'is' or source_interaction == 'ss' or source_interaction == '+') and (target_interaction == 'consume' or target_interaction == 'degradation'):
+                    elif source_interaction in positive_source_interactions and target_interaction in negative_target_interactions:
                         graph.add_edge(source, target, interaction='-')
-                    elif (source_interaction == 'x' or source_interaction == '-') and (target_interaction == 'produce' or target_interaction == 'synthesis'):
+                    elif source_interaction in negative_source_interactions and target_interaction in positive_target_interactions:
                         graph.add_edge(source, target, interaction='-')
-                    elif (source_interaction == 'x' or source_interaction == '-') and (target_interaction == 'consume' or target_interaction == 'degradation'):
+                    elif source_interaction in negative_source_interactions and target_interaction in negative_target_interactions:
                         graph.add_edge(source, target, interaction='+')
                     else:
-                        print('ERROR: combination of source interaction (' + str(source_interaction) + ') and target interaction (' + target_interaction + ') not represented in PART 2 of script')
+                        raise ValueError('combination of source interaction ({}) and target interaction ({}) not represented in PART 2 of script'.format(source_interaction, target_interaction))
             for target in targets:
                 graph.remove_edge(node, target)
             #eliminate reaction node
