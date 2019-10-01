@@ -97,7 +97,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R"
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
 
 # Same for inputs options
-if (is.na(opt$inputInhibs) & is.na(opt$inputStimuli)) {
+if (is.na(opt$inputInhibs)) {
   stop("Please provide input nodes to be toggled in simulation rounds")
 }
 inputInhibs <- trimws(strsplit(opt$inputInhibs, ",")[[1]])
@@ -187,7 +187,9 @@ for (i in 0:(rounds-1)) {
   combinations[i + 1,] <- as.logical(intToBits(i))[1:numInputs]
 }
 combinationsStimuli <- combinations[,1:length(inputStimuli), drop=FALSE]
-combinationsInhibs <- combinations[,(length(inputStimuli)+1):ncol(combinations), drop=FALSE]
+if(length(inputInhibs) > 0) {
+  combinationsInhibs <- combinations[,(length(inputStimuli)+1):ncol(combinations), drop=FALSE]
+}
 
 # Make sure regexes match something in network
 inputStimuliRegex <- escapeRegex(inputStimuli)
@@ -200,13 +202,15 @@ for (i in 1:length(inputStimuli)) {
   }
 }
 
-inputInhibsRegex <- escapeRegex(inputInhibs)
-for (i in 1:length(inputInhibs)) {
-  matches <- symbolMapping$name[grepl(inputInhibsRegex[i], symbolMapping$name)]
-  if(length(matches) == 0) {
-    stop("Input ", inputInhibs[i], " could not be matched to a rxncon node.")
-  } else {
-    cat("Input", inputInhibs[i], "was matched to rxncon nodes", paste0(matches, collapse=", "), "\n")
+if (length(inputInhibs) > 0) {
+  inputInhibsRegex <- escapeRegex(inputInhibs)
+  for (i in 1:length(inputInhibs)) {
+    matches <- symbolMapping$name[grepl(inputInhibsRegex[i], symbolMapping$name)]
+    if(length(matches) == 0) {
+      stop("Input ", inputInhibs[i], " could not be matched to a rxncon node.")
+    } else {
+      cat("Input", inputInhibs[i], "was matched to rxncon nodes", paste0(matches, collapse=", "), "\n")
+    }
   }
 }
 
@@ -245,8 +249,10 @@ for (i in 1:rounds) {
   }
 
   # Fix inhibited nodes present in round off
-  for (regex in inputInhibsRegex[combinationsInhibs[i,]]) {
-    offNodes <- c(offNodes, symbolMapping$ID[grepl(regex, symbolMapping$name)])
+  if (length(inputInhibs > 0)) {
+    for (regex in inputInhibsRegex[combinationsInhibs[i,]]) {
+      offNodes <- c(offNodes, symbolMapping$ID[grepl(regex, symbolMapping$name)])
+    }
   }
   roundNetwork <- fixGenes(roundNetwork, offNodes, 0)
 
@@ -275,7 +281,11 @@ resultsGather$color[resultsGather$value <= 0.5] <- "black"
 
 # Do the same for inputs
 combinations <- as.data.frame(combinations)
-colnames(combinations) <- c(inputStimuli, inputInhibs)
+if (length(inputInhibs) > 0) {
+  colnames(combinations) <- c(inputStimuli, inputInhibs)
+} else {
+  colnames(combinations) <- inputStimuli
+}
 combinations$num <- 1:nrow(combinations)
 combinationsGather <- gather(combinations, "input", "value", -num)
 
@@ -325,7 +335,9 @@ cat("Saving data... ")
 results$num <- NULL
 for (i in 1:nrow(results)) {
   results$stimuli[i] <- paste0(inputStimuli[combinationsStimuli[i,]], collapse = ", ")
-  results$inhibitors[i] <- paste0(inputInhibs[combinationsInhibs[i,]], collapse = ", ")
+  if (length(inputInhibs) > 0) {
+    results$inhibitors[i] <- paste0(inputInhibs[combinationsInhibs[i,]], collapse = ", ")
+  }
 }
 
 # Write to csv
