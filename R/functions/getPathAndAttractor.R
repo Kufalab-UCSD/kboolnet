@@ -13,7 +13,7 @@
 # A list with two entries: path and attractor
 ########################################
 
-getPathAndAttractor <- function(network, states, names) {
+getPathAndAttractor <- function(network, states, names=NULL) {
   path <- t(getPathToAttractor(network, states)) # Simulate the path
   rownames(path) <- names
   states <- path[,ncol(path)] # Use last path state as new start for attractor
