@@ -291,13 +291,15 @@ for (i in 1:ncol(combinations)) { # For each input
 }
 
 # Replace redundant combinations with simplified version
-for (i in 1:nrow(newCombinations)) {
-  delete <- combinations[,which(newCombinations[i,] == TRUE)] # Get the redundant rows to delete
-  combinations <- combinations[!delete,,drop=F] # Remove the redundant combinations
-  results <- results[!delete,,drop=F] # Remove the redundant results
+if (nrow(newCombinations) > 0) {
+  for (i in 1:nrow(newCombinations)) {
+    delete <- combinations[,which(newCombinations[i,] == TRUE)] # Get the redundant rows to delete
+    combinations <- combinations[!delete,,drop=F] # Remove the redundant combinations
+    results <- results[!delete,,drop=F] # Remove the redundant results
+  }
+  combinations <- rbind(combinations, newCombinations)
+  results <- rbind(results, newResults)
 }
-combinations <- rbind(combinations, newCombinations)
-results <- rbind(results, newResults)
 
 # Gather the dataframes so they're in plottable format
 resultsGather <- results
@@ -326,13 +328,15 @@ inputColors <- c("*"="white", "None"="white", "Inhibitor"="red2", "Stimulus"="gr
 inputPlot <- ggplot(combinationsGather, aes(x=.5, y=.5)) +
   facet_grid(cols=vars(input), rows=vars(num)) +
   geom_tile(aes(fill=value), colour="black", size=1) + # Create the tiles (colour and size affect borders)
-  geom_text(data=combinationsGather[combinationsGather$value == "*",], label="*", size=8, vjust=.7) +
   scale_fill_manual(values=inputColors, drop=FALSE) + # Color the tiles appropriately
   scale_x_continuous(limits=c(0,1), expand=c(0,0)) + scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
   theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank(), # Remove axis labels
         legend.position = "none", panel.background = element_blank(), strip.text.y = element_blank(), # Remove legend, background, and y labels
         strip.background = element_blank(), strip.text.x = element_text(angle=90, hjust=0), # Turn cue labels 90 degrees
         plot.margin = unit(c(0,5.5,0,0), "pt"), plot.background = element_blank()) # Remove margins, these are set by data plot
+if(nrow(combinationsGather[combinationsGather$value == "*",]) > 0) { # If necessary, add stars to represent redundant inputs
+  inputPlot <- inputPlot + geom_text(data=combinationsGather[combinationsGather$value == "*",], label="*", size=8, vjust=.7)
+}
 
 # Results plot
 resultsPlot <- ggplot(resultsGather, aes(x=.5, y=.5)) +
