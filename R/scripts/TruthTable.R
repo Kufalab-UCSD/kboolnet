@@ -272,22 +272,49 @@ close(pb)
 
 ##################### Plot ##############################
 cat("Generating plots... ")
-# Gather the dataframes so they're in plottable format
+# Try and simplify conditions that result in the same outputs
 results <- as.data.frame(results)
-results$num <- 1:nrow(results)
-resultsGather <- gather(results, "signal", "value", -num)
+combinations <- as.data.frame(combinations)
+newCombinations <- combinations[0,,drop=F]
+newResults <- results[0,,drop=F]
+for (i in 1:ncol(combinations)) { # For each input
+  # Get the combinations in which which input is present
+  inputPresent <- which(combinations[,i])
+  
+  # If there is no variation in the output value when the input is present
+  if ((max(results[inputPresent,]) - min(results[inputPresent,])) == 0) { 
+    # Append it to newCombinations and newResults
+    newResults[nrow(newResults) + 1,] <- results[inputPresent[1],,]
+    newCombinations[nrow(newCombinations) + 1,] <- rep("*", ncol(combinations)) # Set all inputs to *
+    newCombinations[nrow(newCombinations), i] <- TRUE # Except for the input that's identical
+  }
+}
+
+# Replace redundant combinations with simplified version
+for (i in 1:nrow(newCombinations)) {
+  delete <- combinations[,which(newCombinations[i,] == TRUE)] # Get the redundant rows to delete
+  combinations <- combinations[!delete,,drop=F] # Remove the redundant combinations
+  results <- results[!delete,,drop=F] # Remove the redundant results
+}
+combinations <- rbind(combinations, newCombinations)
+results <- rbind(results, newResults)
+
+# Gather the dataframes so they're in plottable format
+resultsGather <- results
+resultsGather$num <- 1:nrow(results)
+resultsGather <- gather(resultsGather, "signal", "value", -num)
 resultsGather$color[resultsGather$value > 0.5] <- "white"
 resultsGather$color[resultsGather$value <= 0.5] <- "black"
 
 # Do the same for inputs
-combinations <- as.data.frame(combinations)
 if (length(inputInhibs) > 0) {
   colnames(combinations) <- c(inputStimuli, inputInhibs)
 } else {
   colnames(combinations) <- inputStimuli
 }
-combinations$num <- 1:nrow(combinations)
-combinationsGather <- gather(combinations, "input", "value", -num)
+combinationsGather <- combinations
+combinationsGather$num <- 1:nrow(combinations)
+combinationsGather <- gather(combinationsGather, "input", "value", -num)
 
 # Add type information to inputs
 combinationsGather$value[combinationsGather$value == FALSE] = "None"
@@ -295,17 +322,18 @@ combinationsGather$value[(combinationsGather$input %in% inputStimuli) & combinat
 combinationsGather$value[(combinationsGather$input %in% inputInhibs) & combinationsGather$value == TRUE] = "Inhibitor"
 
 # Inputs plot
-inputColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3")
+inputColors <- c("*"="white", "None"="white", "Inhibitor"="red2", "Stimulus"="green3")
 inputPlot <- ggplot(combinationsGather, aes(x=.5, y=.5)) +
   facet_grid(cols=vars(input), rows=vars(num)) +
   geom_tile(aes(fill=value), colour="black", size=1) + # Create the tiles (colour and size affect borders)
+  geom_text(data=combinationsGather[combinationsGather$value == "*",], label="*", size=8, vjust=.7) +
   scale_fill_manual(values=inputColors, drop=FALSE) + # Color the tiles appropriately
   scale_x_continuous(limits=c(0,1), expand=c(0,0)) + scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
   theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank(), # Remove axis labels
         legend.position = "none", panel.background = element_blank(), strip.text.y = element_blank(), # Remove legend, background, and y labels
         strip.background = element_blank(), strip.text.x = element_text(angle=90, hjust=0), # Turn cue labels 90 degrees
         plot.margin = unit(c(0,5.5,0,0), "pt"), plot.background = element_blank()) # Remove margins, these are set by data plot
- 
+
 # Results plot
 resultsPlot <- ggplot(resultsGather, aes(x=.5, y=.5)) +
   facet_grid(cols=vars(signal), rows=vars(num)) +
@@ -322,8 +350,8 @@ resultsPlot <- ggplot(resultsGather, aes(x=.5, y=.5)) +
 widths = c(ncol(combinations), ncol(results)*3)
 p <- suppressWarnings(suppressMessages(ggarrange(inputPlot, resultsPlot, widths = widths, nrow = 1, ncol = 2)))
 
-height = 1.1 * nrow(results)
-width =  0.25 * (ncol(combinations) + ncol(results) * 3)
+height = (.7 * nrow(results)) + 1
+width =  (0.25 * (ncol(combinations) + ncol(results) * 3)) + 1
 ggsave(plot=p, device="pdf", paste0(outPath, "truth_table.pdf"), height = height, width = width)
 
 cat("Done.", "\n")
