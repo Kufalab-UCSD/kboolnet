@@ -77,9 +77,9 @@ rownames(path) <- path[,1]
 path <- path[,2:ncol(path), drop=F]
 
 # Try and match components to path data
-nodeTypes <- getTableColumns(columns=c("name","type")) # Get types of nodes
-rownames(nodeTypes) <- nodeTypes$name
-components <- nodeTypes$name[nodeTypes$type == "component"] # Get list of only components
+nodeTypes <- getTableColumns(columns=c("rxnconID","type")) # Get types of nodes
+rownames(nodeTypes) <- nodeTypes$rxnconID
+components <- nodeTypes$rxnconID[nodeTypes$type == "component"] # Get list of only components
 for (component in components) {
   if (component %in% rownames(path)) { # If the component is already in the path data, skip it
     next()
@@ -92,7 +92,7 @@ for (component in components) {
 ################ Frame generation #####################
 cat("Generating frames... DO NOT TOUCH YOUR COMPUTER WHILE DOING THIS OR THE GIF WILL NOT GENERATE PROPERLY.", "\n")
 
-invisible(loadTableData(data.frame(row.names = nodeTypes$name, val = numeric(nrow(nodeTypes))))) # Load 0 to "val" column to reset edge routing
+invisible(loadTableData(data.frame(rxnconID = nodeTypes$rxnconID, val = numeric(nrow(nodeTypes))), data.key.column = "rxnconID", table.key.column = "rxnconID")) # Load 0 to "val" column to reset edge routing
 formatStr <- paste0("%0", nchar(toString(ncol(path))), "d.png") # Set formatting string for filenames
 
 # Loop over each timepoint to create the frames
@@ -103,7 +103,7 @@ for (i in 1:ncol(path)) {
   colnames(cytoscapeTable) <- c("val")
   
   # Load it into Cytoscape
-  invisible(loadTableData(cytoscapeTable))
+  invisible(loadTableData(cytoscapeTable, table.key.column = "rxnconID"))
   
   # Write the frame to the temporary directory
   exportImage(filename = paste0(tmpdir, sprintf(formatStr, i-1)), zoom = opt$zoom)

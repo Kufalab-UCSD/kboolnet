@@ -114,8 +114,6 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, rem
             id_label[node] = {'label': mapping[node]}
         nx.set_node_attributes(graph, id_label)
 
-        nx.relabel_nodes(graph, mapping, copy=False)
-
     if layout_template_file:
         print('Writing layout information from [{0}] to graph file [{1}] ...'.format(layout_template_file, graph_filename))
         gml_system = XGMML(graph, "{}".format(output))

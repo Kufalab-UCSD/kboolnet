@@ -271,8 +271,6 @@ def write_xgmml(excel_filename: str, output=None, layout_template_file=None, bas
         id_label[id] = {'label': mapping[id]}
     nx.set_node_attributes(graph, id_label)
 
-    nx.relabel_nodes(graph, mapping, copy=False)
-
     #PART 4 OF IMPLEMENTATION - REMOVE ANY LOOPS TO SELF
     for node in graph.nodes():
         #check to see if node has itself as a target
@@ -342,11 +340,11 @@ def setup_logging_colors():
 
 
 if __name__ == '__main__':
-    # try:
-    setup_logging_colors()
-    run()
-    # except Exception as e:
-        # print('ERROR: {}\n{}\nPlease re-run this command with the \'-v DEBUG\' option.'.format(type(e), e))
+    try:
+        setup_logging_colors()
+        run()
+    except Exception as e:
+        print('ERROR: {}\n{}\nPlease re-run this command with the \'-v DEBUG\' option.'.format(type(e), e))
 
 
         
