@@ -90,6 +90,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/inhibitedNetwork.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/readMIDASExcel.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/plotMIDAS.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/plotMIDASComp.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
