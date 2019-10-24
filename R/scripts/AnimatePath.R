@@ -96,7 +96,7 @@ invisible(loadTableData(data.frame(rxnconID = nodeTypes$rxnconID, val = numeric(
 formatStr <- paste0("%0", nchar(toString(ncol(path))), "d.png") # Set formatting string for filenames
 
 # Loop over each timepoint to create the frames
-pb <- txtProgressBar(min=1, max=ncol(path), style=3) # Progress bar
+pb <- txtProgressBar(min=0, max=ncol(path), style=3) # Progress bar
 for (i in 1:ncol(path)) {
   # Get the timepoint data
   cytoscapeTable <- path[,i,drop=F]
@@ -116,7 +116,7 @@ close(pb)
 # Add frame number labels
 cat("Labeling frames...", "\n")
 frames <- dir(tmpdir)
-pb <- txtProgressBar(min=1, max=length(frames), style=3) # Progress bar
+pb <- txtProgressBar(min=0, max=length(frames), style=3) # Progress bar
 for (i in 1:length(frames)) {
   frameFile <- paste0(tmpdir, frames[i])
   system2(command = "convert", args = c(frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", frameFile))
