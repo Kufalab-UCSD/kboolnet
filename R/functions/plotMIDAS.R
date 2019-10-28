@@ -65,24 +65,41 @@ plotMIDAS <- function(MIDASlist, dataWidth = NA) {
   if (nrow(emptyPanels) > 0) {
     emptyPanels[,c("variance", "value", "time")] <- NA
     data <- rbind(data, emptyPanels)
+    
+    # Data plot
+    xlimits <- c(min(data$time, na.rm = T), max(data$time, na.rm = T))
+    ylimits <- c(min(data$value, na.rm = T), max(data$value, na.rm =T))
+    panelHeight <- (ylimits[2] - ylimits[1]) * 1.3
+    panelWidth <- (xlimits[2] - xlimits[1]) * 1.3
+    dataPlot <- ggplot() + 
+      geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight, width = panelWidth), fill = "grey") +
+      geom_line(data=data, aes(x=time, y=value)) +
+      geom_point(data=data, aes(x=time, y=value)) +
+      # geom_errorbar(data=data, aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
+      coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
+      facet_grid(cols=vars(signal), rows=vars(cueNum)) + # This splits the graph into times and cues
+      xlab("Time (min)") + ylab("Signal") + labs(fill="MSE") + # Add labels
+      theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
+            panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
+            plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"))
+  } else {
+    # Data plot
+    xlimits <- c(min(data$time, na.rm = T), max(data$time, na.rm = T))
+    ylimits <- c(min(data$value, na.rm = T), max(data$value, na.rm =T))
+    panelHeight <- (ylimits[2] - ylimits[1]) * 1.3
+    panelWidth <- (xlimits[2] - xlimits[1]) * 1.3
+    dataPlot <- ggplot() + 
+      geom_line(data=data, aes(x=time, y=value)) +
+      geom_point(data=data, aes(x=time, y=value)) +
+      # geom_errorbar(data=data, aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
+      coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
+      facet_grid(cols=vars(signal), rows=vars(cueNum)) + # This splits the graph into times and cues
+      xlab("Time (min)") + ylab("Signal") + labs(fill="MSE") + # Add labels
+      theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
+            panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
+            plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"))
   }
 
-  # Data plot
-  xlimits <- c(min(data$time, na.rm = T), max(data$time, na.rm = T))
-  ylimits <- c(min(data$value, na.rm = T), max(data$value, na.rm =T))
-  panelHeight <- (ylimits[2] - ylimits[1]) * 1.3
-  panelWidth <- (xlimits[2] - xlimits[1]) * 1.3
-  dataPlot <- ggplot() + 
-    geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight, width = panelWidth), fill = "grey") +
-    geom_line(data=data, aes(x=time, y=value)) +
-    geom_point(data=data, aes(x=time, y=value)) +
-    # geom_errorbar(data=data, aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
-    coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
-    facet_grid(cols=vars(signal), rows=vars(cueNum)) + # This splits the graph into times and cues
-    xlab("Time (min)") + ylab("Signal") + labs(fill="MSE") + # Add labels
-    theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
-          panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
-          plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"))
     
   # Cues plot
   cueColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3", "KO"="darkblue")
