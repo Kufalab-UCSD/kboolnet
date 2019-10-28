@@ -282,7 +282,8 @@ for (i in 1:ncol(combinations)) { # For each input
   inputPresent <- which(combinations[,i])
   
   # If there is no variation in the output value when the input is present
-  if ((max(results[inputPresent,]) - min(results[inputPresent,])) == 0) { 
+  identicalCols <- apply(results[inputPresent,], 2, function(x) {(max(x) - min(x)) == 0})
+  if (all(identicalCols)) { 
     # Append it to newCombinations and newResults
     newResults[nrow(newResults) + 1,] <- results[inputPresent[1],,]
     newCombinations[nrow(newCombinations) + 1,] <- rep("*", ncol(combinations)) # Set all inputs to *
