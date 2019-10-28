@@ -396,7 +396,11 @@ for (i in 1:length(ligNodesNames)) {
   # Move each of those rows to the beginning of the order (unless they're already at the front)
   for (j in 1:length(origInds)) {
     if (origInds[j] > j) {
-      orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
+      if (inds[j] == 1) { # If not at top
+        orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
+      } else if (inds[j] == nrow(orderSimPath)) { # If all the way at the bottom
+        orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1)),]
+      }
       inds <- grep(ligNodesNames[i], rownames(orderSimPath), fixed=T)
     }
   }
