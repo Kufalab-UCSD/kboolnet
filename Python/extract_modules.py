@@ -91,16 +91,19 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     for num, row in enumerate(rxn_rows):
         row_modules = list(map(str.strip, row[column_rxn_module].value.split(','))) # Split modules into list and trim whitespace
         
-        if not row[column_rxn_quality].value == '': # If quality missing, keep the row
+        if row[column_rxn_quality].value == '': # If quality missing, assume quality = 0
+            row_quality = 0
+        else:
             try: # Try and parse quality to an int
                 row_quality = int(row[column_rxn_quality].value)
             except ValueError:
                 raise TypeError('Reaction {}\'s quality must be an int.'.format(row[excel_book._column_reaction_full_name].value))
             
-            if row_quality < min_quality: # If less than minimum quality skip row
-                logger.debug('Skipping reaction row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
-                continue
-        elif not modules == [] and not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
+        if row_quality < min_quality: # If less than minimum quality skip row
+            logger.debug('Skipping reaction row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
+            continue
+
+        if not modules == [] and not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
             logger.debug('Skipping reaction row {} (module not present)'.format(num))
             continue
         else:
@@ -113,18 +116,19 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     for num, row in enumerate(con_rows):
         row_modules = list(map(str.strip, row[column_con_module].value.split(','))) # Split modules into list and trim whitespace
         
-        if row[excel_book._column_contingency_modifier].value == '': # If empty row, skip it
-            continue
-        elif not row[column_con_quality].value == '': # If quality missing, keep the row
+        if row[column_rxn_quality].value == '': # If quality missing, assume quality = 0
+            row_quality = 0
+        else:
             try: # Try and parse quality to an int
                 row_quality = int(row[column_con_quality].value)
             except ValueError:
                 raise TypeError('Contingency {}\'s quality must be an int.'.format(num))
             
-            if row_quality < min_quality: # If less than minimum quality skip row
-                logger.debug('Skipping contingency row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
-                continue
-        elif not modules == [] and not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
+        if row_quality < min_quality: # If less than minimum quality skip row
+            logger.debug('Skipping contingency row {} (reaction quality: {}, min quality: {})'.format(num, row_quality, min_quality))
+            continue
+
+        if not modules == [] and not any(item in row_modules for item in modules): # If row module isnt in modules list, skip row
             logger.debug('Skipping contingency row {} (module not present)'.format(num))
             continue
         else:
