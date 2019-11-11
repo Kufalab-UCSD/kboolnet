@@ -91,6 +91,9 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     for num, row in enumerate(rxn_rows):
         row_modules = list(map(str.strip, row[column_rxn_module].value.split(','))) # Split modules into list and trim whitespace
         
+        if row[excel_book._column_reaction_full_name].value.strip() == '': # Skip empty rows
+            continue
+        
         if row[column_rxn_quality].value == '': # If quality missing, assume quality = 0
             row_quality = 0
         else:
@@ -115,8 +118,11 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
 
     for num, row in enumerate(con_rows):
         row_modules = list(map(str.strip, row[column_con_module].value.split(','))) # Split modules into list and trim whitespace
-        
-        if row[column_rxn_quality].value == '': # If quality missing, assume quality = 0
+
+        if row[excel_book._column_contingency_target].value.strip() == '': # Skip empty rows
+            continue
+
+        if row[column_con_quality].value == '': # If quality missing, assume quality = 0
             row_quality = 0
         else:
             try: # Try and parse quality to an int
