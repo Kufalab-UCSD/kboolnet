@@ -129,7 +129,7 @@ readMIDASExcel <- function(MIDASfile) {
     if (length(TRcol) < 1) stop(paste0("Table ", names(tables)[i], " is missing treatment (TR) columns!"))
     for (j in TRcol) {
       tables[[i]][,TRcol[j]] <- as.numeric(tables[[i]][,TRcol[j]])
-      if (any(sapply(tables[[i]][,TRcol[j]], function(x) !(x == 1 | x == 0)))) { # If any value in row doesn't equal 0 or 1
+      if (any(sapply(tables[[i]][,TRcol[j]], function(x) !(x == 1 | x == 0) | is.na(x)))) { # If any value in row doesn't equal 0 or 1)
         stop(paste0("Row ", names(tables[[i]])[TRcol[j]], " in table ", names(tables)[i], " has incorrect values (must be 0 or 1)."))
       }
     }
