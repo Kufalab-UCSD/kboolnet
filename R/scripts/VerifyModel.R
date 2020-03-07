@@ -17,6 +17,7 @@ suppressMessages(library(openxlsx))
 suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
+suppressMessages(library(numbers))
 
 ################ Function definitions #################
 
@@ -124,7 +125,7 @@ rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
 # Load functions
 suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/compMatrix.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/attractorDistance.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/inhibitedNetwork.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
@@ -290,7 +291,7 @@ for (i in 2:maxrounds) {
   roundNoLigCompScores <- matrix(nrow = length(roundNoLigAttr), ncol = length(roundNoLigAttr))
   for (j in 1:length(roundNoLigAttr)) {
     for (k in j:length(roundNoLigAttr)) {
-      roundNoLigCompScores[j,k] <- compMatrix(roundNoLigAttr[[j]], roundNoLigAttr[[k]])
+      roundNoLigCompScores[j,k] <- 1 - attractorDistance(roundNoLigAttr[[j]], roundNoLigAttr[[k]])
     }
   }
   
@@ -299,7 +300,7 @@ for (i in 2:maxrounds) {
     # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
     roundNoLigScores <- numeric(length(roundNoLigAttr))
     for (j in 1:length(roundNoLigAttr)) {
-      roundNoLigScores[j] <- compMatrix(roundNoLigAttr[[j]], noLigAttr[[i-1]])
+      roundNoLigScores[j] <- 1 - attractorDistance(roundNoLigAttr[[j]], noLigAttr[[i-1]])
     }
     noLigAttr[[i]] <- roundNoLigAttr[[which.min(roundNoLigScores)]]
     noLigPath[[i]] <- roundNoLigPath[[which.min(roundNoLigScores)]]
@@ -319,7 +320,7 @@ for (i in 2:maxrounds) {
   roundLigCompScores <- matrix(nrow = length(roundLigAttr), ncol = length(roundLigAttr))
   for (j in 1:length(roundLigAttr)) {
     for (k in j:length(roundLigAttr)) {
-      roundLigCompScores[j,k] <- compMatrix(roundLigAttr[[j]], roundLigAttr[[k]])
+      roundLigCompScores[j,k] <- 1 - attractorDistance(roundLigAttr[[j]], roundLigAttr[[k]])
     }
   }
   
@@ -328,7 +329,7 @@ for (i in 2:maxrounds) {
     # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
     roundLigScores <- numeric(length(roundLigAttr))
     for (j in 1:length(roundLigAttr)) {
-      roundLigScores[j] <- compMatrix(roundLigAttr[[i]], ligAttr[[i-1]])
+      roundLigScores[j] <- 1 - attractorDistance(roundLigAttr[[i]], ligAttr[[i-1]])
     }
     ligAttr[[i]] <-roundLigAttr[[which.min(roundLigScores)]]
     ligPath[[i]] <-roundLigPath[[which.min(roundLigScores)]]
@@ -341,14 +342,18 @@ for (i in 2:maxrounds) {
   
   # Compare this round of simulation to previous rounds
   for (j in 1:rounds) {
-    scoreLig[j,rounds] <- compMatrix(ligAttr[[rounds]], ligAttr[[j]])
-    scoreNoLig[j,rounds] <- compMatrix(noLigAttr[[rounds]], noLigAttr[[j]])
+    scoreLig[j,rounds] <- 1 - attractorDistance(ligAttr[[rounds]], ligAttr[[j]])
+    scoreNoLig[j,rounds] <- 1 - attractorDistance(noLigAttr[[rounds]], noLigAttr[[j]])
   }
   
   # If both ligand and no-ligand simulations are identical to a previous round, then we know a
   # "meta-attractor" has been found and we can stop simulation
   if (rounds != 1 & any(scoreLig[1:rounds-1,rounds] == 1) & any(scoreNoLig[1:rounds-1,rounds] == 1)) {
     cat("Meta-attractor found! Stopping simulation.", "\n")
+    
+    if (rounds > 2) {
+      warning("Meta-attractor found after more than 2 rounds. This indicates possible traps/irreversible modifications.")
+    }
     break
   } else if (rounds == maxrounds) {
     cat("Max number of simulation rounds reached! Stopping simulation.", "\n")
@@ -378,8 +383,10 @@ write.csv(scoreNoLig, file = paste0(outPath, "nolig/simulation_comparison.csv"))
 # Plot the attractor comparison matrices
 scoreLigPlot   <- plotCompMat(scoreLig)
 scoreNoLigPlot <- plotCompMat(scoreNoLig)
-suppressMessages(ggsave(paste0(outPath, "lig/simulation_comparison.pdf"), device="pdf", plot=scoreLigPlot))
-suppressMessages(ggsave(paste0(outPath, "nolig/simulation_comparison.pdf"), device="pdf", plot=scoreNoLigPlot))
+width <- 1 + 0.75 * ncol(scoreLig)
+height <- 1 + 0.75 * nrow(scoreLig)
+suppressMessages(ggsave(paste0(outPath, "lig/simulation_comparison.pdf"), device="pdf", plot=scoreLigPlot, width=width, height=height))
+suppressMessages(ggsave(paste0(outPath, "nolig/simulation_comparison.pdf"), device="pdf", plot=scoreNoLigPlot, width=width, height=height))
 
 # Create ordering for plots based on first simulation results
 orderSimPath <- cbind(ligAttr[[1]], 1:nrow(ligAttr[[1]]))
