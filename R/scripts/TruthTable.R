@@ -308,6 +308,7 @@ resultsGather$num <- 1:nrow(results)
 resultsGather <- gather(resultsGather, "signal", "value", -num)
 resultsGather$color[resultsGather$value > 0.5] <- "white"
 resultsGather$color[resultsGather$value <= 0.5] <- "black"
+resultsGather$signal <- factor(resultsGather$signal, levels = outputs) # This puts the outputs in the order inputted
 
 # Do the same for inputs
 if (length(inputInhibs) > 0) {
@@ -323,6 +324,7 @@ combinationsGather <- gather(combinationsGather, "input", "value", -num)
 combinationsGather$value[combinationsGather$value == FALSE] = "None"
 combinationsGather$value[(combinationsGather$input %in% inputStimuli) & combinationsGather$value == TRUE] = "Stimulus"
 combinationsGather$value[(combinationsGather$input %in% inputInhibs) & combinationsGather$value == TRUE] = "Inhibitor"
+combinationsGather$input <- factor(combinationsGather$input, levels = c(inputStimuli, inputInhibs)) # Puts inputs in order inputted
 
 # Inputs plot
 inputColors <- c("*"="white", "None"="white", "Inhibitor"="red2", "Stimulus"="green3")
@@ -348,7 +350,7 @@ resultsPlot <- ggplot(resultsGather, aes(x=.5, y=.5)) +
   scale_fill_gradient(limits=c(0,1), low="white", high="steelblue") + # Color the tiles appropriately
   scale_x_continuous(limits=c(0,1), expand=c(0,0)) + scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
   theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank(), # Remove axis labels
-        panel.background = element_blank(), strip.text.y = element_blank(), # Remove legend, background, and y labels
+        panel.background = element_blank(), strip.text.y = element_blank(), legend.position = "none", # Remove legend, background, and y labels
         strip.background = element_blank(), strip.text.x = element_text(angle=90, hjust=0), # Turn cue labels 90 degrees
         plot.margin = unit(c(0,5.5,0,0), "pt"), plot.background = element_blank()) # Remove margins, these are set by data plot
 
