@@ -75,14 +75,6 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
   # Remove empty values from data
   expData <- expData[!(is.na(expData$value)),]
   simData <- simData[!(is.na(simData$value)),]
-  
-  # If there are empty panels, add empty values to them so they will still be drawn
-  if (nrow(emptyPanels) > 0) {
-    emptyPanels[,c("variance", "value", "time")] <- NA
-    expData <- rbind(expData, emptyPanels)
-  }
-  
-  
 
   # Data plot
   xlimits <- c(min(allData$time, na.rm = T), max(allData$time, na.rm = T))
@@ -93,8 +85,6 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
     geom_tile(data=errData, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
                                width = panelWidth, fill=value), alpha = 0.6) +
     scale_fill_gradient(low="green", high="red", limits=c(0,1), position="left") +
-    geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
-                                    width = panelWidth), fill = "grey", alpha = 0.6) +
     geom_line(data=simData, aes(x=time, y=value), linetype = "twodash") +
     geom_point(data=simData, aes(x=time, y=value)) +
     geom_line(data=expData, aes(x=time, y=value)) +
@@ -106,6 +96,15 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
     theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
           panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
           plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"), legend.position = "left")
+
+  # If there are empty panels, add empty values to them so they will still be drawn
+  if (nrow(emptyPanels) > 0) {
+    emptyPanels[,c("variance", "value", "time")] <- NA
+    expData <- rbind(expData, emptyPanels)
+    daataPlot <- dataPlot + geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
+                                                            width = panelWidth), fill = "grey", alpha = 0.6)
+  }
+
 
   # Cues plot
   cueColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3", "KO"="darkblue")
