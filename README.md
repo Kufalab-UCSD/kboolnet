@@ -10,19 +10,18 @@ Various scripts for the rxncon/boolnet pipeline of the Kufareva lab.
 Branches:
 
 - `master`: Working version of the pipeline (currently a WIP)
-~~- `devel`: Main development branch, code changes should go here so they can be reviewed before merging into `master`.~~ For now, keep everything in `master`
+- ~~`devel`: Main development branch, code changes should go here so they can be reviewed before merging into `master`.~~ For now, keep everything in `master`
 
 To check out a branch, run: `git checkout <branch>`
 
 ### Install dependencies
 
-R dependencies: `BoolNet`, `ggplot2`, `dplyr`, `openxlsx`, `googledrive`, `optparse`, `tidyr`, `CellNOptR`, `plyr`, `cowplot`
+R dependencies: `ggplot2`, `dplyr`, `openxlsx`, `googledrive`,  `tidyr`, `numbers`, `xml2`, `BoolNet`, `egg`, `optparse`, `plyr`, and `RCy3`
+To install these dependencies, enter an R environment run: `install.packages(pkgs=c("ggplot2", "dplyr", "openxlsx", "googledrive",  "tidyr", "numbers", "xml2", "BoolNet", "egg", "optparse", "plyr", "RCy3"), dependencies=TRUE)`
 
-To install these dependencies, enter an R environment run: `install.packages(pkgs=c("BoolNet", "ggplot2", "dplyr", "openxlsx", "googledrive", "optparse", "tidyr", "CellNOptR", "plyr", "cowplot"), dependencies=TRUE)`
+Python dependencies: `rxncon`, `openpyxl`, `networkx`
 
-Python dependencies: `rxncon`, `openpyxl`
-
-To install these dependencies, run: `pip install rxncon openpyxl`
+To install these dependencies, run: `pip install rxncon openpyxl networkx`
 
 ## Contributing
 A small intro to git that should be enough to get you up and running with the repository.
