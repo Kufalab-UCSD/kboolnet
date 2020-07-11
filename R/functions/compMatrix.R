@@ -16,7 +16,6 @@
 # 
 # Returns: numerical similarty value
 # 
-# Depends on: BoolNet, dplyr
 # ###################################################
 
 compMatrix <- function(mat1, mat2) {

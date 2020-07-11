@@ -22,8 +22,8 @@ hamming <- function(vec1, vec2) {
 }
 
 attractorDistance <- function(attr1, attr2) {
-  lengthLCM <- LCM(ncol(attr1), ncol(attr2))
-  lengthGCD <- GCD(ncol(attr1), ncol(attr2))
+  lengthLCM <- numbers::LCM(ncol(attr1), ncol(attr2))
+  lengthGCD <- numbers::GCD(ncol(attr1), ncol(attr2))
   netSize <- nrow(attr1)
   
   scores <- sapply(0:(lengthGCD-1), function(shift) {

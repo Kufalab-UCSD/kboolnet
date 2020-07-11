@@ -10,7 +10,7 @@
 # Args:
 #   -MIDASfile: MIDAS file to be read
 #
-# Dependencies: openxlsx, dplyr
+# Dependencies: openxlsx
 ############################################################
 
 ############## This function taken from makeCNOlist in CellNOptR
@@ -22,12 +22,16 @@ compareNA <- function(v1,v2) {
     return(same)
 }
 
-readMIDASExcel <- function(MIDASfile) {
+readMIDASExcel <- function(MIDASfile, cell_types = "all") {
+  if (cell_types == "all") {
+    cell_types <- c()
+  }
+  
   # Load the Excel workbook
-  wb <- loadWorkbook(MIDASfile)
+  wb <- openxlsx::loadWorkbook(MIDASfile)
   
   ############# Treatment definition parsing ###################
-  treatmentDefs <- read.xlsx(wb, sheet = "TreatmentDefs", colNames = F)
+  treatmentDefs <- openxlsx::read.xlsx(wb, sheet = "TreatmentDefs", colNames = F)
   
   # Remove empty and non-MIDAS rows and columns
   treatmentDefs <- treatmentDefs[rowSums(is.na(treatmentDefs)) != ncol(treatmentDefs),]
@@ -44,9 +48,10 @@ readMIDASExcel <- function(MIDASfile) {
   treatmentDefs$type[grepl("^(Inhibitor|I|Inhib)", treatmentDefs$type, ignore.case = T)] <- "Inhibitor"
   treatmentDefs$type[grepl("^(Stimulus|S|Stimulus)", treatmentDefs$type, ignore.case = T)] <- "Stimulus"
   treatmentDefs$type[grepl("^(Knockout|Knockdown|KO)", treatmentDefs$type, ignore.case = T)] <- "KO"
+  treatmentDefs$type[grepl("^(Mutant|Mut|M)", treatmentDefs$type, ignore.case = T)] <- "Mutant"
   
   # Validation of treatment types
-  if (any(!grepl("(Inhibitor|Stimulus|KO)", treatmentDefs$type))) {
+  if (any(!grepl("(Inhibitor|Stimulus|KO|Mutant)", treatmentDefs$type))) {
     stop("Invalid treatment type detected in TreatmentDefs sheet")
   }
   
@@ -67,14 +72,14 @@ readMIDASExcel <- function(MIDASfile) {
   ########### Experimental data sheet loading ################
   # Load all sheets (except for TreatmentDef)
   sheetNames <- names(wb)[names(wb) != "TreatmentDefs"]
-  sheets <- lapply(sheetNames, read.xlsx, xlsxFile = wb, colNames = F)
+  sheets <- lapply(sheetNames, openxlsx::read.xlsx, xlsxFile = wb, colNames = F)
   
   # Extract sub-tables from all sheets
   tables <- list()
   for (i in 1:length(sheets)) {
     headerRows <- grep("TH", sheets[[i]][,1]) # Get row numbers of sub-tables' header rows in each sheet
     
-    # If no TH present, throw watning
+    # If no TH present, throw warning
     if (length(headerRows) == 0) {
       stop("Sheet ", sheetNames[i], " has no TH cells, skipping.")
       next
@@ -83,20 +88,20 @@ readMIDASExcel <- function(MIDASfile) {
     # If more than one TH row present, iterate through and get all the sub-tables
     if (length(headerRows) > 1) {
       for (j in 1:(length(headerRows)-1)) {
-        # Skip tables marked with :Ignore
+        # Skip tables marked with :Ignore 
         if (grepl(":Ignore$", sheets[[i]][headerRows[j],1])) {
           cat("Skipping table", sheets[[i]][headerRows[j],1], "\n")
           next
         }
         
         tables <- c(tables, list(sheets[[i]][(headerRows[j]+1):(headerRows[j+1]-1),])) # Add sub-table to tables list
-        names(tables)[length(tables)] <- strsplit(sheets[[i]][headerRows[j],1], ":")[[1]][2] # Set table name based on TH row
+        names(tables)[length(tables)] <- sheets[[i]][headerRows[j],1] # Set table name based on TH row
       }
     }
     
     if (!grepl(":Ignore$", sheets[[i]][headerRows[length(headerRows)],1])) {
       tables <- c(tables, list(sheets[[i]][(headerRows[length(headerRows)]+1):nrow(sheets[[i]]),])) # Do the same for the last sub-table (if it isnt ignored)
-      names(tables)[length(tables)] <- strsplit(sheets[[i]][headerRows[length(headerRows)],1], ":")[[1]][2] # Set table name based on TH row
+      names(tables)[length(tables)] <- sheets[[i]][headerRows[length(headerRows)],1] # Set table name based on TH row
     } else {
       cat("Skipping table", sheets[[i]][headerRows[length(headerRows)],1], "\n")
     }
@@ -105,6 +110,23 @@ readMIDASExcel <- function(MIDASfile) {
   
   
   ################ Table cleanup/validation #################
+  # Discard tables not of correct cell type
+  table_cell_types <- c()
+  for (name in names(tables)) {
+    s <- strsplit(name, ":")[[1]]
+    if (length(s) > 2) {
+      table_cell_types <- c(table_cell_types, s[3])
+    } else {
+      table_cell_types <- c(table_cell_types, NA)
+    }
+  }
+  if (length(cell_types)> 0) {
+    tables <- tables[which(table_cell_types %in% cell_types)]
+    if (length(tables) == 0) {
+      cat("No tables of cell type(s)", paste0(cell_types, collapse = ", "))
+    }
+  }
+  
   # Remove empty (i.e. all NA) and non-MIDAS rows and columns
   tables <- lapply(tables, function(x) {
     x <- x[rowSums(is.na(x)) != ncol(x),]

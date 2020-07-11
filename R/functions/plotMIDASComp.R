@@ -19,13 +19,13 @@ gatherMIDASlist <- function(MIDASlist) {
     timeValues <- as.data.frame(MIDASlist$valueSignals[,,i]) # Get data values
     timeValues <- cbind(timeValues, 1:nrow(timeValues)) # Add column to keep track of the cue combination
     colnames(timeValues) <- c(MIDASlist$namesSignals, "cueNum") # Set column names
-    timeValues <- gather(timeValues, "signal", "value", -cueNum)
+    timeValues <- tidyr::gather(timeValues, "signal", "value", -cueNum)
     
     # Do the same as above for variances
     timeVariances <- as.data.frame(MIDASlist$valueVariances[,,i]) # Get data variances
     timeVariances <- cbind(timeVariances, 1:nrow(timeVariances)) # Add column to keep track of the cue combination
     colnames(timeVariances) <- c(MIDASlist$namesSignals, "cueNum") # Set column names
-    timeVariances <- gather(timeVariances, "signal", "variance", -cueNum)
+    timeVariances <- tidyr::gather(timeVariances, "signal", "variance", -cueNum)
     
     # Merge timeVariances and timeValues
     merged <- merge(timeVariances, timeValues)
@@ -38,6 +38,20 @@ gatherMIDASlist <- function(MIDASlist) {
   }
   
   return(data)
+}
+
+expandLimits <- function(limits, factor) {
+  expand_by <- (limits[2] - limits[1]) * (1 + (factor/2))
+  return(c(limits[1]-factor, limits[2]+factor))
+  
+}
+
+no_zero <- function(x) {
+  y <- sprintf('%.1f',x)
+  y[x > 0 & x < 1] <- sprintf('.%s',x[x > 0 & x < 1]*10)
+  y[x == 0] <- '0'
+  y[x > -1 & x < 0] <- sprintf('-.%s',x[x > -1 & x < 0]*-10)
+  y
 }
 
 plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = NA) {
@@ -58,8 +72,10 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
   # Also process the cues data
   cues <- as.data.frame(expMIDASlist$valueCues)
   colnames(cues) <- expMIDASlist$namesCues
+  cues <- cues[,colSums(cues) != 0]
   cues$cueNum <- 1:nrow(cues)
-  cuesGather <- gather(cues, "cue", "value", -cueNum)
+  cuesGather <- tidyr::gather(cues, "cue", "value", -cueNum)
+  cuesGather$cue <- factor(cuesGather$cue, levels=MIDASlist$treatmentDefs$name)
   cuesGather$value[cuesGather$value == 0] <- "None" # Set all zeroes to None
   for (cue in expMIDASlist$namesCues) { # Set cues to their types
     cuesGather$value[cuesGather$cue == cue & cuesGather$value == 1] <- expMIDASlist$treatmentDefs$type[expMIDASlist$treatmentDefs$name == cue]
@@ -81,42 +97,45 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
   ylimits <- c(min(allData$value, na.rm = T), max(allData$value, na.rm =T))
   panelHeight <- (ylimits[2] - ylimits[1]) * 1.3
   panelWidth <- (xlimits[2] - xlimits[1]) * 1.3
-  dataPlot <- ggplot() + 
-    geom_tile(data=errData, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
+  dataPlot <- ggplot2::ggplot() + 
+    ggplot2::geom_tile(data=errData, ggplot2::aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
                                width = panelWidth, fill=value), alpha = 0.6) +
-    scale_fill_gradient(low="green", high="red", limits=c(0,1), position="left") +
-    geom_line(data=simData, aes(x=time, y=value), linetype = "twodash") +
-    geom_point(data=simData, aes(x=time, y=value)) +
-    geom_line(data=expData, aes(x=time, y=value)) +
-    geom_point(data=expData, aes(x=time, y=value)) +
-    # geom_errorbar(data=data, aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
-    coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
-    xlab("Time (min)") + ylab("Signal") + labs(fill="MSE") +
-    facet_grid(cols=vars(signal), rows=vars(cueNum)) + # This splits the graph into times and cues
-    theme(strip.text.y = element_blank(), # Removes the facet labels on the y axis
-          panel.border = element_rect(size=1, fill=NA, colour="black"), # Add borders
-          plot.margin = unit(c(5.5,2.75,5.5,5.5), "pt"), legend.position = "left")
+    ggplot2::scale_fill_gradient(low="green", high="red", limits=c(0,1), position="left") +
+    ggplot2::geom_line(data=simData, ggplot2::aes(x=time, y=value), linetype = "twodash", color = "gray50") +
+    ggplot2::geom_point(data=simData, ggplot2::aes(x=time, y=value), color = "gray50") +
+    ggplot2::geom_line(data=expData, ggplot2::aes(x=time, y=value)) +
+    ggplot2::geom_point(data=expData, ggplot2::aes(x=time, y=value)) +
+    # ggplot2::geom_errorbar(data=data, ggplot2::aes(ymin=value-sqrt(variance), ymax=value+sqrt(variance)), width=10) + # Error bars
+    ggplot2::coord_cartesian(xlim = xlimits, ylim = ylimits) + # Set graph limits
+    ggplot2::scale_y_continuous(breaks=c(ylimits[1], mean(ylimits), ylimits[2]), labels = no_zero) +
+    ggplot2::scale_x_continuous(breaks=c(xlimits[1], mean(xlimits), xlimits[2]), labels = no_zero) +
+    ggplot2::xlab("Time (min)") + ggplot2::ylab("Signal") + ggplot2::labs(fill="MSE") +
+    ggplot2::facet_grid(cols=vars(signal), rows=vars(cueNum)) + # This splits the graph into times and cues
+    ggplot2::theme(strip.text.y = ggplot2::element_blank(), # Removes the facet labels on the y axis
+          strip.background = ggplot2::element_blank(), strip.text.x = ggplot2::element_text(angle=90, hjust=0),
+          panel.border = ggplot2::element_rect(size=1, fill=NA, colour="black"), # Add borders
+          plot.margin = ggplot2::unit(c(5.5,2.75,5.5,5.5), "pt"), legend.position = "left")
 
   # If there are empty panels, add empty values to them so they will still be drawn
   if (nrow(emptyPanels) > 0) {
     emptyPanels[,c("variance", "value", "time")] <- NA
     expData <- rbind(expData, emptyPanels)
-    daataPlot <- dataPlot + geom_tile(data=emptyPanels, aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
+    daataPlot <- dataPlot + ggplot2::geom_tile(data=emptyPanels, ggplot2::aes(x=mean(xlimits), y=mean(ylimits), height=panelHeight,
                                                             width = panelWidth), fill = "grey", alpha = 0.6)
   }
 
 
   # Cues plot
-  cueColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3", "KO"="darkblue")
-  cuesPlot <- ggplot(cuesGather, aes(x=.5, y=.5)) +
-    facet_grid(cols=vars(cue), rows=vars(cueNum)) +
-    geom_tile(aes(fill=value), colour="black", size=1) + # Create the tiles (colour and size affect borders)
-    scale_fill_manual(values=cueColors, drop=FALSE) + # Color the tiles appropriately
-    scale_x_continuous(limits=c(0,1), expand=c(0,0)) + scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
-    theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank(), # Remove axis labels
-          legend.position = "none", panel.background = element_blank(), strip.text.y = element_blank(), # Remove legend, background, and y labels
-          strip.background = element_blank(), strip.text.x = element_text(angle=90, hjust=0), # Turn cue labels 90 degrees
-          plot.margin = unit(c(0,5.5,0,0), "pt"), plot.background = element_blank()) # Remove margins, these are set by data plot
+  cueColors <- c("None"="white", "Inhibitor"="red2", "Stimulus"="green3", "KO"="darkblue", "Mutant"="magenta4")
+  cuesPlot <- ggplot2::ggplot(cuesGather, ggplot2::aes(x=.5, y=.5)) +
+    ggplot2::facet_grid(cols=vars(cue), rows=vars(cueNum)) +
+    ggplot2::geom_tile(ggplot2::aes(fill=value), colour="black", size=1) + # Create the tiles (colour and size affect borders)
+    ggplot2::scale_fill_manual(values=cueColors, drop=FALSE) + # Color the tiles appropriately
+    ggplot2::scale_x_continuous(limits=c(0,1), expand=c(0,0)) + ggplot2::scale_y_reverse(limits=c(1,0), expand=c(0,0)) + # Reverse the ordering and set proper scales
+    ggplot2::theme(axis.title = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), # Remove axis labels
+          legend.position = "none", panel.background = ggplot2::element_blank(), strip.text.y = ggplot2::element_blank(), # Remove legend, background, and y labels
+          strip.background = ggplot2::element_blank(), strip.text.x = ggplot2::element_text(angle=90, hjust=0), # Turn cue labels 90 degrees
+          plot.margin = ggplot2::unit(c(0,5.5,0,0), "pt"), plot.background = ggplot2::element_blank()) # Remove margins, these are set by data plot
   
   # If width wasn't provided, make a best guess for it
   if (is.na(dataWidth)) {
@@ -126,5 +145,5 @@ plotMIDASComp <- function(expMIDASlist, simMIDASlist, errMat = NA, dataWidth = N
   }
   
   # Put them together and plot
-  return(suppressWarnings(suppressMessages(ggarrange(dataPlot, cuesPlot, widths = widths))))
+  return(suppressWarnings(suppressMessages(egg::ggarrange(dataPlot, cuesPlot, widths = widths))))
 }

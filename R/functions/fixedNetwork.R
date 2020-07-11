@@ -1,15 +1,18 @@
 ##############################################
-# inhibitedNetwork.R
+# fixedNetwork.R
 # Adrian C
 #
-# Create an inhibited BoolNet network based on
+# Create a fixed BoolNet network based on
 # a list of rxncon components or states to be
 # inhibited.
 #
 # Dependencies: BoolNet
 ##############################################
 
-inhibitedNetwork <- function(network, inhib, names, symbols) {
+fixedNetwork <- function(network, inhib, names, symbols, effect = 0) {
+  if (!effect %in% c(0, 1)) {
+    stop("Invalid effect on the network. Must be either 0 to fix off or 1 to fix on.")
+  }
   inhibNodes <- character()
   for (i in 1:length(inhib)) {
     # Make sure the inhibited nodes/components exist
@@ -27,7 +30,7 @@ inhibitedNetwork <- function(network, inhib, names, symbols) {
   }
   
   # Fix inhib nodes off
-  network <- fixGenes(network, inhibNodes, 0)
+  network <- BoolNet::fixGenes(network, inhibNodes, effect)
   
   return(network)
 }

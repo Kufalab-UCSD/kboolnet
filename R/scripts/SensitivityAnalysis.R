@@ -13,6 +13,7 @@
 options(stringsAsFactors = F)
 suppressMessages(library(BoolNet))
 suppressMessages(library(ggplot2))
+suppressMessages(library(egg))
 suppressMessages(library(dplyr))
 suppressMessages(library(openxlsx))
 suppressMessages(library(googledrive))
@@ -21,7 +22,7 @@ suppressMessages(library(tidyr))
 
 ################ Function definitions #################
 # Performs sensitivity analysis for all/selected components from a given initial state
-KOanalysis <- function(network, names, symbols, states, outputs, components = c()) {
+KOanalysis <- function(network, names, symbols, states, components = c()) {
   # If components was not defined, include all components in the network
   if (length(components) == 0) {
     allStates <- symbolMapping$name[startsWith(symbolMapping$ID, "S") &! startsWith(symbolMapping$name, "[")]
@@ -49,14 +50,14 @@ KOanalysis <- function(network, names, symbols, states, outputs, components = c(
     diffs[i,] <- KOAttrMeans - origAttrMeans
   }
   
-  diffs <- diffs[, colnames(diffs) %in% outputs] # Keep only the requested output nodes
-  diffs$MSE <- rowMeans(diffs^2)
+  # diffs <- diffs[, colnames(diffs) %in% outputs] # Keep only the requested output nodes
+  # diffs$MSE <- rowMeans(diffs^2)
   
   return(diffs)
 }
 
 # Similar to KOanalysis, except doing it on a per-reaction basis
-reactionAnalysis <- function(network, names, symbols, states, outputs, reactions = c()) {
+reactionAnalysis <- function(network, names, symbols, states, reactions = c()) {
   # If components was not defined, include all reactions in the network
   if (length(reactions) == 0) {
     reactions <- symbolMapping$name[startsWith(symbolMapping$ID, "R")]
@@ -83,11 +84,41 @@ reactionAnalysis <- function(network, names, symbols, states, outputs, reactions
     diffs[i,] <- inhibAttrMeans - origAttrMeans
   }
   
-  diffs <- diffs[, colnames(diffs) %in% outputs] # Keep only the requested output nodes
-  diffs$MSE <- rowMeans(diffs^2)
+  # diffs <- diffs[, colnames(diffs) %in% outputs] # Keep only the requested output nodes
+  # diffs$MSE <- rowMeans(diffs^2)
   
   return(diffs)
 }
+
+plotDiffs <- function(diffs, file = NA) {
+  # Processing before plotting
+  diffs <- as.data.frame(diffs)
+  diffs <- diffs[rowSums(diffs == 0) != ncol(diffs),] # Keep only rows which are different
+  diffsGather <- diffs
+  diffsGather$MSE <- rowMeans(diffs^2)
+  diffsGather$KO <- rownames(diffsGather) # Add rownames as a column
+  diffsGather <- gather(diffsGather, key = "signal", value = "diff", -KO, -MSE) # Gather into key-values
+  diffsGather$KO <- factor(diffsGather$KO, levels=unique(diffsGather$KO[order(diffsGather$MSE, decreasing = TRUE)])) # Order KO by decreasing MSE
+  
+  # Plot the differences
+  diffPlot <- ggplot(data = diffsGather, aes(x = 0.5, y = 0.5, height = 1 , width = 1)) +
+    facet_grid(cols = vars(signal), rows = vars(KO), switch = "y") +
+    geom_tile(aes(fill = diff), colour = "black", size = 1) +
+    scale_fill_gradient2(limits = c(-1, 1), low = "red", mid = "white", high = "steelblue") +
+    scale_y_continuous(limits = c(0,1), expand = c(0,0)) + scale_x_continuous(limits = c(0,1), expand = c(0,0)) +
+    # xlab("Output") + ylab("KO") +
+    theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(), strip.background = element_blank(),
+          strip.text.x = element_text(angle = 90, hjust = 0), strip.text.y = element_text(angle = 180, hjust = 0))
+  
+  if (!is.na(file)) {
+    width = length(unique(diffsGather$signal)) * .5 + 3
+    height = length(unique(diffsGather$KO)) * .5 + 2
+    ggsave(filename = file, plot = diffPlot, width = width, height = height)
+  }
+  
+  return(diffPlot)
+}
+
 ################# Argument parsing #################
 # Get commandline args
 option_list = list(
@@ -155,7 +186,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/compMatrix.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/inhibitedNetwork.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/fixedNetwork.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
 
 # Parse modules option to a list
@@ -251,28 +282,63 @@ initStates$name <- gsub(" ", "", initStates$name)
 
 # Create a BoolNet network in which nodes have been inhibited
 if (length(inhib) > 0) {
-  network <- inhibitedNetwork(network, inhib, symbolMapping$name, symbolMapping$ID)
+  network <- fixedNetwork(network, inhib, symbolMapping$name, symbolMapping$ID)
 }
 
 # Create init states without the ligand
 noLigStates <- initStates
 for (lig in ligands) {
+  if (sum(grepl(paste0("^", lig, "(_|$).*"), noLigStates$name)) == 0) {
+    stop(paste0("Ligand ", lig, " not found!"))
+  }
   noLigStates$state[grepl(paste0("^", lig, "(_|$).*"), noLigStates$name)] <- 0
 }
 
 ################ Doing the analyses ####################
-# KO analysis
-cat("Performing component KO sensitivity analysis... ")
-noLigKO <- KOanalysis(network, symbolMapping$name, symbolMapping$symbol, noLigStates$state, outputs)
-ligKO <- KOanalysis(network, symbolMapping$name, symbolMapping$symbol, initStates$state, outputs)
+# KO analysis w/out ligand
+cat("Performing component KO sensitivity analysis without ligand... ")
+noLigKO <- KOanalysis(network, symbolMapping$name, symbolMapping$ID, noLigStates$state)
 write.csv(noLigKO, file = paste0(outPath, "no_ligand_KO_analysis.csv"))
-write.csv(ligKO, file = paste0(outPath, "ligand_KO_analysis.csv"))
-cat("Done.", "\n")
+noLigKO <- noLigKO[,colnames(noLigKO) %in% outputs] # Keep only the outputs for plotting
+if(sum(noLigKO) == 0) {
+  cat("No difference in outputs detected between KO and non-KO attractors, skipping plotting.", "\n")
+} else {
+  plotDiffs(noLigKO, paste0(outPath, "no_ligand_KO_analysis.pdf"))
+  cat("Done.", "\n")
+}
 
-# Reaction analysis
-cat("Performing reaction inhibition sensitivity analysis... ")
-noLigReaction <- reactionAnalysis(network,symbolMapping$name, symbolMapping$symbol, noLigStates$state, outputs)
-ligReaction <- reactionAnalysis(network,symbolMapping$name, symbolMapping$symbol, initStates$state, outputs)
+# KO analysis w/ ligand
+cat("Performing component KO sensitivity analysis with ligand... ")
+ligKO <- KOanalysis(network, symbolMapping$name, symbolMapping$ID, initStates$state)
+write.csv(ligKO, file = paste0(outPath, "ligand_KO_analysis.csv"))
+ligKO <- ligKO[,colnames(ligKO) %in% outputs] # Keep only the outputs 
+if(sum(ligKO) == 0) {
+  cat("No difference in ouputs detected between KO and non-KO attractors, skipping plotting.", "\n")
+} else {
+  plotDiffs(ligKO, paste0(outPath, "ligand_KO_analysis.pdf"))
+  cat("Done.", "\n")
+}
+
+# Reaction analysis w/out ligand
+cat("Performing reaction inhibition sensitivity analysis without ligand... ")
+noLigReaction <- reactionAnalysis(network, symbolMapping$name, symbolMapping$ID, noLigStates$state)
 write.csv(noLigReaction, file = paste0(outPath, "no_ligand_reaction_analysis.csv"))
+noLigReaction <- noLigReaction[,colnames(noLigReaction) %in% outputs] # Keep only the outputs for plotting
+if(sum(noLigReaction) == 0) {
+  cat("No difference in ouputs detected between inhibited and uninhibted attractors, skipping plotting.", "\n")
+} else {
+  plotDiffs(noLigReaction, paste0(outPath, "no_ligand_reaction_analysis.pdf"))
+  cat("Done.", "\n")
+}
+  
+# Reaction analysis w/ ligand
+cat("Performing reaction inhibition sensitivity analysis with ligand... ")
+ligReaction <- reactionAnalysis(network, symbolMapping$name, symbolMapping$ID, initStates$state)
 write.csv(noLigReaction, file = paste0(outPath, "ligand_reaction_analysis.csv"))
-cat("Done.", "\n")
+ligReaction <- ligReaction[,colnames(ligReaction) %in% outputs] # Keep only the outputs for plotting
+if(sum(ligReaction) == 0) {
+  cat("No difference in ouputs detected between inhibited and uninhibted attractors, skipping plotting.", "\n")
+} else {
+  plotDiffs(ligReaction, paste0(outPath, "ligand_reaction_analysis.pdf"))
+  cat("Done.", "\n")
+}

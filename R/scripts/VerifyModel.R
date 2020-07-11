@@ -127,7 +127,7 @@ suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/attractorDistance.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/inhibitedNetwork.R")))
+suppressMessages(source(paste0(kboolnetPath, "R/functions/fixedNetwork.R")))
 suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
 
 # Parse modules option to a list
@@ -222,7 +222,7 @@ initStates$name <- gsub(" ", "", initStates$name)
 
 # Create a BoolNet network in which nodes have been inhibited
 if (length(inhib) > 0) {
-  network <- inhibitedNetwork(network, inhib, symbolMapping$name, symbolMapping$ID)
+  network <- fixedNetwork(network, inhib, symbolMapping$name, symbolMapping$ID)
 }
 
 # Find the nodes that the ligands correspond to
