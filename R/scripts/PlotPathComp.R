@@ -23,20 +23,20 @@ plotPathOverlap <- function(path1, path2, filePath = "", ratio = 0.8) {
   colnames(path2) <- sprintf("t%03d", 0:(path_length-1)) # Replace t..0 with t000
   path1$symbols  <- rownames(path1)
   path2$symbols  <- rownames(path2)
-  
+
   # Rearranges data frame 1
   pathGather1         <- gather(path1, "t", "value", 1:path_length)
   pathGather1$symbols <- factor(pathGather1$symbols, levels = rownames(path1)[nrow(path1):1])
   pathGather1$t       <- factor(pathGather1$t)
   pathGather1$value   <- factor(pathGather1$value, levels = c("0", "1"))
-  
+
   # Rearranges data frame 2
   pathGather2         <- gather(path2, "t", "value", 1:path_length)
   pathGather2$symbols <- factor(pathGather2$symbols, levels = rownames(path2)[nrow(path2):1])
   pathGather2$t       <- factor(pathGather2$t)
   pathGather2$value   <- factor(pathGather2$value, levels = c("0", "1", "2"))
   pathGather2$value[pathGather2$value == "1"] <- "2"
-  
+
   # Plot first simulation
   compColors <- c("0" = "transparent", "1" = "red", "2" = "steelblue")
   p          <- ggplot() +
@@ -47,13 +47,13 @@ plotPathOverlap <- function(path1, path2, filePath = "", ratio = 0.8) {
   ratio <- 0.8
   p         <- p + theme_grey(base_size = base_size) + theme(panel.background = element_blank()) + labs(x = "", y = "") + scale_x_discrete(expand = c(0, 0)) + scale_y_discrete(expand = c(0, 0)) +
                 coord_fixed(ratio=ratio) + guides(fill = guide_legend(title="Active in path:"))
-  
+
   # Save plot to file
   if (filePath != "") {
     filePath <- gsub(".pdf$", "", filePath, ignore.case = TRUE) # Remove extension if present
     ggsave(paste0(filePath, ".pdf"), plot = last_plot(), height=(5 + length(levels(pathGather1$symbols)) * 0.25), width=(10 + length(levels(pathGather1$t)) * 0.45), scale = 1, units = "cm")
   }
-  
+
   return(p)
 }
 
@@ -63,12 +63,15 @@ option_list = list(
   make_option(c("-p", "--path"), action="store_true", default=FALSE,
               help="Indicate that input files are paths, not attractors. This slightly changes how alignment is performed."),
   make_option(c("-o", "--output"), action="store", default="./combined",
-              help="Base name for output files. [default %]")
+              help="Base name for output files. [default: %]"),
+  make_option(c("-n", "--nodes"), action="store", default="",
+              help="Comma-separated ordered list of nodes to plot. [default: all]")
 )
 usage <- "usage: %prog [options] FILE1 FILE2\n\n FILE1 and FILE2 are the .csv files to be compared"
 opt <- parse_args(OptionParser(usage=usage, option_list=option_list), positional_arguments = 2)
 
 output <- opt$options$output
+nodes <- rev(trimws(strsplit(opt$options$nodes, ",")[[1]]))
 
 ############## The Actual Code™ ###############
 
@@ -95,7 +98,7 @@ mats <- list(as.matrix(mat1, nrow=nrow(mat1), ncol=ncol(mat1)), as.matrix(mat2, 
 # } else if (ncol(mat2) < ncol(mat1)) {
 #   mat2 <- cbind(mat2, matrix(nrow=nrow(mat2), ncol=ncol(mat1)-ncol(mat2)))
 # }
-# 
+#
 # # Set NAs to equal 0
 # mat1[is.na(mat1)] <- 0
 # mat2[is.na(mat2)] <- 0
@@ -115,10 +118,10 @@ for (i in 1:ncol(mats[[longMat]])) {
   if (i != 1) {
     orders[[i]] <- c((ncol(mats[[longMat]]) - (i - 2)):ncol(mats[[longMat]]), 1:(ncol(mats[[longMat]]) - (i - 1)))
   }
-  
+
   # Apply new ordering to long matrix and convert to vector
   longVec <- as.vector(mats[[longMat]][,orders[[i]]])
-  
+
   # Calculate scores for all horizontal shifts for short matrix
   shiftScores <- numeric()
   for (j in 0:(ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) {
@@ -131,19 +134,19 @@ for (i in 1:ncol(mats[[longMat]])) {
     if (j < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) {
       tmp <- cbind(tmp, matrix(nrow=numRows, ncol=((ncol(mats[[longMat]]) - ncol(mats[[shortMat]])) - j)))
     }
-    
+
     # Calculate score
     shortVec <- as.vector(tmp)
     shiftScores[j+1] <- sum(longVec == shortVec, na.rm=TRUE) / length(longVec)
   }
-  
+
   # Find highest scoring horizontal "shift" for short matrix and keep that score
   shifts[i] <- which.max(shiftScores) - 1
   scores[i] <- max(shiftScores)
-  
+
   # If perfect score, we can stop there
   if (scores[i] == 1) break
-  
+
   # If this is a path, only do this with original ordering
   if (opt$options$path) break
 }
@@ -164,18 +167,22 @@ if (bestShift < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) { # Add to lef
 tmp[is.na(tmp)] <- 0
 mats[[shortMat]] <- tmp
 
-# # Multiply mat2 by 2 and then add the matrices. As a result, values will be as follows:
-# # mat1 and mat2 on: 3, only mat2 on: 2, only mat1 on: 1, neither on: 0
-# mat_combined_all <- mats[[1]] + (mats[[2]] * 2)
+# Order rows according to nodes argument
+if (length(nodes) != 0) {
+  mats[[1]] <- mats[[1]][nodes,,drop=F]
+  mats[[2]] <- mats[[2]][nodes,,drop=F]
+}
 
 # Get rows with not matching values
-matCombined <- mats[[1]] - mats[[2]]
 diffRows <- rowSums(mats[[1]] - mats[[2]]) != 0
-
 
 ############### Plotting ################
 # Plot entire path
 plotPathOverlap(mats[[1]], mats[[2]], paste0(output, "_all.pdf"))
-  
+
 # Plot only different rows
-plotPathOverlap(mats[[1]][diffRows,,drop=F], mats[[2]][diffRows,,drop=F], paste0(output, "_diff.pdf"))
+if (sum(diffRows) == 0) {
+  cat("No difference between attractors for selected nodes! Skipping difference plot. \n")
+} else {
+  plotPathOverlap(mats[[1]][diffRows,,drop=F], mats[[2]][diffRows,,drop=F], paste0(output, "_diff.pdf"))
+}
