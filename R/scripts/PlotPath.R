@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 
 ##############################################################
-# PlotPath.R 
+# PlotPath.R
 # Adrian C
 #
-# Command-line wrapper for plotPath.R function 
+# Command-line wrapper for plotPath.R function
 #
 ##############################################################
 
@@ -80,12 +80,12 @@ rownames(path) <- path[,1]
 path <- path[,2:ncol(path), drop=F]
 
 # Keep only the nodes that are wanted
-if (length(nodes > 0)) {
+if (length(nodes) > 0) {
   # First, check that every nodes argument actually exists in the path
   if (any(!(nodes %in% rownames(path))) ){
     stop("Node(s) ", paste0(nodes[!(nodes %in% rownames(path))], collapse=", "), " are not in the path/attractor file")
   }
-  
+
   # Get indices of nodes to keep and only keep them
   path <- path[nodes, ,drop=F]
 }
@@ -93,11 +93,11 @@ if (length(nodes > 0)) {
 # Remove domain names if requested
 if (opt$nodomains) {
   newNames <- gsub("_\\[.*?\\]", "", rownames(path))
-  
+
   # If there are ambigious names due to domain simplification, replace them with the old names
   ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
   newNames[ambigNames] <- rownames(path)[ambigNames]
-  
+
   rownames(path) <- newNames
 }
 
