@@ -65,7 +65,9 @@ option_list = list(
   make_option(c("-o", "--output"), action="store", default="./combined",
               help="Base name for output files. [default: %]"),
   make_option(c("-n", "--nodes"), action="store", default="",
-              help="Comma-separated ordered list of nodes to plot. [default: all]")
+              help="Comma-separated ordered list of nodes to plot. [default: all]"),
+  make_option(c("--nodomains", "-d"), action="store_true", default=FALSE, type="logical",
+              help="Remove domains from rxncon node names. [default: don't remove]")
 )
 usage <- "usage: %prog [options] FILE1 FILE2\n\n FILE1 and FILE2 are the .csv files to be compared"
 opt <- parse_args(OptionParser(usage=usage, option_list=option_list), positional_arguments = 2)
@@ -171,6 +173,18 @@ mats[[shortMat]] <- tmp
 if (length(nodes) != 0) {
   mats[[1]] <- mats[[1]][nodes,,drop=F]
   mats[[2]] <- mats[[2]][nodes,,drop=F]
+}
+
+# Remove domain information if requested
+if (opt$options$nodomains) {
+  newNames <- gsub("_\\[.*?\\]", "", rownames(mats[[1]]))
+
+  # If there are ambigious names due to domain simplification, replace them with the old names
+  ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
+  newNames[ambigNames] <- rownames(mats[[1]])[ambigNames]
+
+  rownames(mats[[1]]) <- newNames
+  rownames(mats[[2]]) <- newNames
 }
 
 # Get rows with not matching values
