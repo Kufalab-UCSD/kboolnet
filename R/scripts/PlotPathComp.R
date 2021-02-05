@@ -73,7 +73,7 @@ usage <- "usage: %prog [options] FILE1 FILE2\n\n FILE1 and FILE2 are the .csv fi
 opt <- parse_args(OptionParser(usage=usage, option_list=option_list), positional_arguments = 2)
 
 output <- opt$options$output
-nodes <- rev(trimws(strsplit(opt$options$nodes, ",")[[1]]))
+nodes <- trimws(strsplit(opt$options$nodes, ",")[[1]])
 
 ############## The Actual Code™ ###############
 
