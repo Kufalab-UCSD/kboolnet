@@ -129,17 +129,6 @@ numRows <- nrow(mat1)
 
 mats <- list(as.matrix(mat1, nrow=nrow(mat1), ncol=ncol(mat1)), as.matrix(mat2, nrow=nrow(mat2), ncol=ncol(mat2)))
 
-# # If there is a mismatch in number of columns, add empty columns to the shorter matrix
-# if (ncol(mat1) < ncol(mat2)) {
-#   mat1 <- cbind(mat1, matrix(nrow=nrow(mat1), ncol=ncol(mat2)-ncol(mat1)))
-# } else if (ncol(mat2) < ncol(mat1)) {
-#   mat2 <- cbind(mat2, matrix(nrow=nrow(mat2), ncol=ncol(mat1)-ncol(mat2)))
-# }
-#
-# # Set NAs to equal 0
-# mat1[is.na(mat1)] <- 0
-# mat2[is.na(mat2)] <- 0
-
 # Figure out which matrix is long and which one is short
 longMat <- which.max(lapply(mats, length))
 if (longMat == 1) shortMat = 2
