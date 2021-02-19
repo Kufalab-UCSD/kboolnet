@@ -60,26 +60,61 @@ plotPathOverlap <- function(path1, path2, filePath = "", ratio = 0.8) {
 ############# Argument parsing and handling ############
 
 option_list = list(
-  make_option(c("-p", "--path"), action="store_true", default=FALSE,
+  make_option(c("--pathA", "-a"), action="store", default=NA, type="character",
+              help="First of the two paths to be compared."),
+  make_option(c("--pathB", "-b"), action="store", default=NA, type="character",
+              help="Second of the two paths to be compared."),
+  make_option(c("--config", "-c"), action="store", default=NA, type="character",
+              help="Path of config file. You can specify parameters here instead of passing them as command-line
+              arguments"),
+  make_option(c("-p", "--path"), action="store_true", default=NA,
               help="Indicate that input files are paths, not attractors. This slightly changes how alignment is performed."),
-  make_option(c("-o", "--output"), action="store", default="./combined",
-              help="Base name for output files. [default: %]"),
-  make_option(c("-n", "--nodes"), action="store", default="",
+  make_option(c("-o", "--output"), action="store", default=NA,
+              help="Base name for output files. [default: ./combined]"),
+  make_option(c("-n", "--nodes"), action="store", default=NA,
               help="Comma-separated ordered list of nodes to plot. [default: all]"),
-  make_option(c("--nodomains", "-d"), action="store_true", default=FALSE, type="logical",
+  make_option(c("--nodomains", "-d"), action="store_true", default=NA, type="logical",
               help="Remove domains from rxncon node names. [default: don't remove]")
 )
-usage <- "usage: %prog [options] FILE1 FILE2\n\n FILE1 and FILE2 are the .csv files to be compared"
-opt <- parse_args(OptionParser(usage=usage, option_list=option_list), positional_arguments = 2)
+opt <- parse_args(OptionParser(option_list=option_list))
+opt <- opt[!is.na(opt)] # Discard NA values
 
-output <- opt$options$output
-nodes <- trimws(strsplit(opt$options$nodes, ",")[[1]])
+# Load config file if provided
+if ("config" %in% names(opt)) {
+  source(opt$config)
+
+  if (!exists("config")) {
+    stop("No config object found in config file")
+  }
+
+  config <- config[!is.na(config)] # Discard NA values
+
+  # Keep only config values that were not passed as command line options
+  config <- config[!(names(config) %in% names(opt))]
+
+  # Merge command line args and config values
+  opt <- c(opt, config)
+}
+
+# Set default args if they are not already set
+default <- list(path=FALSE, output="./combined", nodomains=FALSE, nodes="")
+default <- default[!(names(default) %in% names(opt))]
+opt     <- c(opt, default)
+
+# Stop if no file provided
+if (is.na(opt$pathA) | is.na(opt$pathB)) {
+  stop("Please two files to be plotted.")
+}
+
+output <- opt$output
+print(opt$nodes)
+nodes <- trimws(strsplit(opt$nodes, ",")[[1]])
 
 ############## The Actual Code™ ###############
 
 # Read in the matrices
-mat1 <- read.csv(opt$args[1], header = TRUE)
-mat2 <- read.csv(opt$args[2], header = TRUE)
+mat1 <- read.csv(opt$pathA, header = TRUE)
+mat2 <- read.csv(opt$pathB, header = TRUE)
 
 # Set the first column as the row names
 rownames(mat1) <- mat1[,1]
@@ -150,7 +185,7 @@ for (i in 1:ncol(mats[[longMat]])) {
   if (scores[i] == 1) break
 
   # If this is a path, only do this with original ordering
-  if (opt$options$path) break
+  if (opt$path) break
 }
 
 # Apply highest-scoring order to long matrix
@@ -176,7 +211,7 @@ if (length(nodes) != 0) {
 }
 
 # Remove domain information if requested
-if (opt$options$nodomains) {
+if (opt$nodomains) {
   newNames <- gsub("_\\[.*?\\]", "", rownames(mats[[1]]))
 
   # If there are ambigious names due to domain simplification, replace them with the old names
