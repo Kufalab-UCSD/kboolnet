@@ -39,25 +39,12 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(out="./plot.pdf", nodes="", nodomains=FALSE, ratio=0.8)
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Stop if no file provided
 if (is.na(opt$file)) {

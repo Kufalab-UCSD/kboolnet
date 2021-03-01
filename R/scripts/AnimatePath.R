@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ##############################################################
-# AnimatePath.R 
+# AnimatePath.R
 # Adrian C
 #
 # Script to generate an animation from an attractor/path csv
@@ -18,16 +18,28 @@ suppressPackageStartupMessages(library(RCy3))
 ############### Argument parsing and setup ###################
 # Get commandline args
 option_list = list(
+  make_option(c("--config", "-c"), action="store", default=NA, type="character",
+              help="Path of config file. You can specify parameters here instead of passing them as command-line
+              arguments"),
   make_option(c("--file", "-f"), action="store", default=NA, type="character",
               help="Name of csv file containing path/attractor to be animated"),
-  make_option(c("--out", "-o"), action="store", default="./animation.mp4", type="character",
+  make_option(c("--out", "-o"), action="store", default=NA, type="character",
               help="Name of mp4 file to which animation should be written. [default: animation.mp4]"),
-  make_option(c("--textsize", "-t"), action="store", default=50, type="numeric",
+  make_option(c("--textsize", "-t"), action="store", default=NA, type="numeric",
               help="Size of frame number label. [default: 50]"),
-  make_option(c("--zoom", "-z"), action="store", default=200, type="numeric",
+  make_option(c("--zoom", "-z"), action="store", default=NA, type="numeric",
               help="Zoom factor for Cytoscape render. Higher = higher quality [default: 200]")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
+
+# Load config file if provided
+if ("config" %in% names(opt)) {
+  opt <- loadConfig(opt, config)
+}
+
+# Set default args if they are not already set
+default <- list(file=NA, out="./animation.mp4", textsize=50, zoom=200)
+opt <- setDefaults(opt, default)
 
 # Stop if no file provided
 if (is.na(opt$file)) {
@@ -84,7 +96,7 @@ for (component in components) {
   if (component %in% rownames(path)) { # If the component is already in the path data, skip it
     next()
   }
-  
+
   componentRows <- path[grepl(paste0(component, "_.*--0"), rownames(path)),,drop=F] # Get all the unbound state rows for that component
   path[component,] <- as.numeric(colSums(componentRows) > 0) # Create a new row for the component that = 1 if any unbound state = 1
 }
@@ -101,13 +113,13 @@ for (i in 1:ncol(path)) {
   # Get the timepoint data
   cytoscapeTable <- path[,i,drop=F]
   colnames(cytoscapeTable) <- c("val")
-  
+
   # Load it into Cytoscape
   invisible(loadTableData(cytoscapeTable, table.key.column = "rxnconID"))
-  
+
   # Write the frame to the temporary directory
   exportImage(filename = paste0(tmpdir, sprintf(formatStr, i-1)), zoom = opt$zoom)
-  
+
   setTxtProgressBar(pb, i) # Update progress bar
 }
 close(pb)
@@ -123,7 +135,7 @@ for (i in 1:length(frames)) {
   setTxtProgressBar(pb, i)
 }
 close(pb)
- 
+
 # Use ffmpeg to stitch to a video
 cat("Converting to video...", "\n")
 system2(command = "ffmpeg", args = c("-framerate 5 -r 5 -loglevel panic -i", paste0(tmpdir, formatStr), opt$out))

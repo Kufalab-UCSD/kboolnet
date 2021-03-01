@@ -28,8 +28,8 @@ KOanalysis <- function(network, names, symbols, states, components = c()) {
     allStates <- symbolMapping$name[startsWith(symbolMapping$ID, "S") &! startsWith(symbolMapping$name, "[")]
     components <- unique(gsub("_.*", "", allStates))
   }
-  
-  # Create df to store results 
+
+  # Create df to store results
   diffs <- as.data.frame(matrix(ncol = length(names), nrow = length(components)))
   rownames(diffs) <- components
   colnames(diffs) <- names
@@ -37,22 +37,22 @@ KOanalysis <- function(network, names, symbols, states, components = c()) {
   # Simulate with the original network
   origAttr <- getPathAndAttractor(network, states, names)$attractor
   origAttrMeans <- rowMeans(origAttr)
-  
+
   # Simulate with each component knocked out
   for (i in 1:length(components)) {
     KOnodes <- symbols[grepl(paste0(components[i], "(_|#|$)"), names)]
     KOnetwork <- fixGenes(network, KOnodes, 0)
-    
+
     KOAttr <- getPathAndAttractor(KOnetwork, states, names)$attractor
     KOAttrMeans <- rowMeans(KOAttr)
-    
+
     # Save the difference to diffs
     diffs[i,] <- KOAttrMeans - origAttrMeans
   }
-  
+
   # diffs <- diffs[, colnames(diffs) %in% outputs] # Keep only the requested output nodes
   # diffs$MSE <- rowMeans(diffs^2)
-  
+
   return(diffs)
 }
 
@@ -62,8 +62,8 @@ reactionAnalysis <- function(network, names, symbols, states, reactions = c()) {
   if (length(reactions) == 0) {
     reactions <- symbolMapping$name[startsWith(symbolMapping$ID, "R")]
   }
-  
-  # Create df to store results 
+
+  # Create df to store results
   diffs <- as.data.frame(matrix(ncol = length(names), nrow = length(reactions)))
   rownames(diffs) <- reactions
   colnames(diffs) <- names
@@ -71,22 +71,22 @@ reactionAnalysis <- function(network, names, symbols, states, reactions = c()) {
   # Simulate with the original network
   origAttr <- getPathAndAttractor(network, states, names)$attractor
   origAttrMeans <- rowMeans(origAttr)
-  
+
   # Simulate with each reaction inhibited
   for (i in 1:length(reactions)) {
     reactionNode <- symbols[names == reactions[i]]
     inhibNetwork <- fixGenes(network, reactionNode, 0)
-    
+
     inhibAttr <- getPathAndAttractor(inhibNetwork, states, names)$attractor
     inhibAttrMeans <- rowMeans(inhibAttr)
-    
+
     # Save the difference to diffs
     diffs[i,] <- inhibAttrMeans - origAttrMeans
   }
-  
+
   # diffs <- diffs[, colnames(diffs) %in% outputs] # Keep only the requested output nodes
   # diffs$MSE <- rowMeans(diffs^2)
-  
+
   return(diffs)
 }
 
@@ -99,7 +99,7 @@ plotDiffs <- function(diffs, file = NA) {
   diffsGather$KO <- rownames(diffsGather) # Add rownames as a column
   diffsGather <- gather(diffsGather, key = "signal", value = "diff", -KO, -MSE) # Gather into key-values
   diffsGather$KO <- factor(diffsGather$KO, levels=unique(diffsGather$KO[order(diffsGather$MSE, decreasing = TRUE)])) # Order KO by decreasing MSE
-  
+
   # Plot the differences
   diffPlot <- ggplot(data = diffsGather, aes(x = 0.5, y = 0.5, height = 1 , width = 1)) +
     facet_grid(cols = vars(signal), rows = vars(KO), switch = "y") +
@@ -109,13 +109,13 @@ plotDiffs <- function(diffs, file = NA) {
     # xlab("Output") + ylab("KO") +
     theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(), strip.background = element_blank(),
           strip.text.x = element_text(angle = 90, hjust = 0), strip.text.y = element_text(angle = 180, hjust = 0))
-  
+
   if (!is.na(file)) {
     width = length(unique(diffsGather$signal)) * .5 + 3
     height = length(unique(diffsGather$KO)) * .5 + 2
     ggsave(filename = file, plot = diffPlot, width = width, height = height)
   }
-  
+
   return(diffPlot)
 }
 
@@ -151,25 +151,12 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, outputs=NA, inhib="")
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -228,15 +215,15 @@ if (opt$minQuality < 0) {
 # If GDrive file provided
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
-  
+
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
-  
+
 # If local file provided
 } else {
   masterFile <- normalizePath(opt$file)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
     stop("rxncon file must be an Excel file (.xslx extension)")
@@ -311,7 +298,7 @@ if(sum(noLigKO) == 0) {
 cat("Performing component KO sensitivity analysis with ligand... ")
 ligKO <- KOanalysis(network, symbolMapping$name, symbolMapping$ID, initStates$state)
 write.csv(ligKO, file = paste0(outPath, "ligand_KO_analysis.csv"))
-ligKO <- ligKO[,colnames(ligKO) %in% outputs] # Keep only the outputs 
+ligKO <- ligKO[,colnames(ligKO) %in% outputs] # Keep only the outputs
 if(sum(ligKO) == 0) {
   cat("No difference in ouputs detected between KO and non-KO attractors, skipping plotting.", "\n")
 } else {
@@ -330,7 +317,7 @@ if(sum(noLigReaction) == 0) {
   plotDiffs(noLigReaction, paste0(outPath, "no_ligand_reaction_analysis.pdf"))
   cat("Done.", "\n")
 }
-  
+
 # Reaction analysis w/ ligand
 cat("Performing reaction inhibition sensitivity analysis with ligand... ")
 ligReaction <- reactionAnalysis(network, symbolMapping$name, symbolMapping$ID, initStates$state)

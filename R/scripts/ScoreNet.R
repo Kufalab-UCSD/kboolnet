@@ -4,8 +4,8 @@
 # ScoreNet.R
 # Adrian C
 #
-# Script to download model and experimental database 
-# from Google Drive and generate comparison score. 
+# Script to download model and experimental database
+# from Google Drive and generate comparison score.
 #################################################
 
 ################# Library loading ##################
@@ -62,26 +62,13 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height= NA,
                 MIDASFile=NA, MIDASDriveFile=NA, bin=0, normalize=FALSE, pretreat=FALSE, celltype="all")
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -116,7 +103,7 @@ if (is.na(opt$rxnconFile) & is.na(opt$rxnconDriveFile)){ # If neither file was p
   stop("Please provide a path to a local MIDAS file with --rxnconFile or a Google Drive file with --rxnconDriveFile")
 } else if ((!is.na(opt$MIDASFile)) & (!is.na(opt$MIDASDriveFile))) { # If both files were provided
   stop("Please provide only one path with EITHER --MIDASFile or --MIDASDriveFile")
-} 
+}
 
 minQuality <- opt$minQuality
 if (opt$minQuality < 0) {
@@ -128,13 +115,13 @@ if (opt$minQuality < 0) {
 # If GDrive file provided
 if (!(is.na(opt$rxnconDriveFile))) {
   cat("Downloading rxncon file from Google Drive... ", "\n")
-  
+
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$rxnconDriveFile, out = masterFile, type = "spreadsheet")
 } else { # If local file provided
   masterFile <- normalizePath(opt$rxnconFile)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
     stop("rxncon file must be an Excel file (.xslx extension)")
@@ -170,13 +157,13 @@ cat("Done.", "\n")
 # If GDrive file provided
 if (!(is.na(opt$MIDASDriveFile))) {
   cat("Downloading MIDAS file from Google Drive...", "\n")
-  
+
   # Download file
   MIDASFile  <- paste0(outPath, "MIDAS.xlsx")
   driveDownload(driveFile = opt$MIDASDriveFile, out = MIDASFile, type = "spreadsheet")
 } else { # If local file provided
   MIDASFile <- normalizePath(opt$MIDASFile)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", MIDASFile)) { # Make sure file is Excel file
     stop("MIDAS file must be an Excel file (.xslx extension)")
@@ -259,7 +246,7 @@ for (i in 1:nrow(MIDASlist$treatmentDefs)) {
   }
 }
 
-# Set them to be off in initial states 
+# Set them to be off in initial states
 for (lig in ligNodes) {
   initStates$state[grepl(paste0("^", lig, "(_.*--0|_.*-\\{0\\}|)$"), initStates$name)] <- 0
 }
@@ -294,7 +281,7 @@ scores <- data.frame(init=numeric(rounds), final=numeric(rounds))
 for (i in 1:rounds) {
   # Get all the cues applied in the round
   roundCues <- MIDASlist$namesCues[as.logical(MIDASlist$valueCues[i,])]
-  
+
   # For each cue, sort it into the correct type
   roundLigs <- character()
   roundKOs <- character()
@@ -308,36 +295,36 @@ for (i in 1:rounds) {
     if (cueType == "Inhibitor") roundInhibs <- c(roundInhibs, cueRegex)
     if (cueType == "Mutant") roundMutants <- c(roundMutants, cueRegex)
   }
-  
+
   cat(paste0("Round ", i, " of ", rounds, ": simulating with KOs: ", paste0(roundKOs, collapse=", "), "; inhibitors: ",
              paste0(roundInhibs, collapse=", "), "; ligands: ", paste0(roundLigs, collapse=", "), "; mutants: ", paste0(roundMutants, collapse=", ")), "\n")
-  
+
   # Apply KOs
   KOnetwork <- network
   if (length(roundKOs) > 0) {
     KOnetwork <- fixedNetwork(KOnetwork, roundKOs, symbolMapping$name, symbolMapping$ID, 0)
   }
-  
+
   # Add mutants
   if (length(roundMutants) > 0) {
     KOnetwork <- fixedNetwork(KOnetwork, roundMutants, symbolMapping$name, symbolMapping$ID, 1)
   }
-  
+
   # Initial simulation to neutral state (t = 0)
   neutralAttr <- getPathAndAttractor(KOnetwork, initStates$state, symbolMapping$name)$attractor
-  
+
   # Inhibit inhibitor nodes
   if (length(roundInhibs) > 0) {
     inhibNetwork <- fixedNetwork(KOnetwork, roundInhibs, symbolMapping$name, symbolMapping$ID, 0)
   } else {
     inhibNetwork <- KOnetwork
   }
-  
+
   # If pretreatment desired, simulated to inhibited attractor
   if (opt$pretreat) {
     neutralAttr <- getPathAndAttractor(inhibNetwork, initStates$state, symbolMapping$name)$attractor
   }
-  
+
   # Use last neutral state as a new initial state
   newInitStates <- initStates
   newInitStates$state <- neutralAttr[,ncol(neutralAttr)]
@@ -348,16 +335,16 @@ for (i in 1:rounds) {
       newInitStates$state[grepl(paste0(lig, "(_.*--0$|_.*-\\{0\\}|$)"), initStates$name)] <- 1
     }
   }
-  
+
   # Simulate to final state
   finalAttr <- getPathAndAttractor(inhibNetwork, newInitStates$state, symbolMapping$name)$attractor
-  
+
   # Save simulation data to simMIDASlist
   for (j in 1:length(MIDASlist$namesSignals)) {
     # Average all the nodes for a signal
     neutralAttrMean <- mean(rowMeans(neutralAttr[signalMapping[[j]],,drop=F]))
     finalAttrMean <- mean(rowMeans(finalAttr[signalMapping[[j]],,drop=F]))
-    
+
     # Put these values in the corresponding spot for simMIDASlist
     simMIDASlist$valueSignals[i,j,1] <- neutralAttrMean
     simMIDASlist$valueSignals[i,j,2] <- finalAttrMean
@@ -387,7 +374,7 @@ if (opt$bin != 0) {
   binTimes <- numeric(length(bins)) # This is for plotting purposes
   for (i in 1:length(bins)) {
     bin <- bins[[i]]
-    if (bin[1] == -Inf) { # If bin goes from negative infinity to a point, set that point as the time 
+    if (bin[1] == -Inf) { # If bin goes from negative infinity to a point, set that point as the time
       binTimes[i] <- bin[2]
     } else if (bin[2] == Inf) { # If bin goes from point to infinity, set point as the time
       binTimes[i] <- bin[1]
@@ -397,12 +384,12 @@ if (opt$bin != 0) {
   }
   binnedData <- array(dim = c(nrow(MIDASlist$valueCues), length(MIDASlist$namesSignals), length(bins)), # Create array to put binned data together
                       dimnames = list(1:nrow(MIDASlist$valueCues), MIDASlist$namesSignals, binNames))
-  
+
   # Create MIDASlist to store the binned data
   binMIDASlist <- MIDASlist
   binMIDASlist$valueVariances <- binnedData
   binMIDASlist$timeSignals <- binTimes
-  
+
   cat("Binning data using bins:", paste0(binNames, collapse=", "), "\n")
   cat(paste0("Bin #", opt$bin, " (", binNames[opt$bin+1], ") will be used for scoring."), "\n")
   for (i in 1:length(bins)) {
@@ -414,7 +401,7 @@ if (opt$bin != 0) {
   binnedData[is.nan(binnedData)] <- NA
   binMIDASlist$valueSignals <- binnedData
   simMIDASlist$timeSignals[2] <- binMIDASlist$timeSignals[opt$bin+1] # Set the simulation time to the bin time
-  
+
   # Save only the bins being used for comparison to avgMIDASlist
   avgMIDASlist <- MIDASlist
   avgMIDASlist$timeSignals <- binMIDASlist$timeSignals[c(1, opt$bin+1)]

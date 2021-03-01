@@ -65,25 +65,12 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, time=20, inhib="")
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -138,15 +125,15 @@ if (opt$time <= 0) {
 # If GDrive file provided
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
-  
+
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
-  
+
 # If local file provided
 } else {
   masterFile <- normalizePath(opt$file)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
     stop("rxncon file must be an Excel file (.xslx extension)")
@@ -191,12 +178,12 @@ seed_species <- bngl[seed_species_idxs[1]:seed_species_idxs[2]]
 for (lig in ligands) {
   # First we find the neutral representation of the ligand
   neutral_lig <- regmatches(seed_species, regexpr(paste0("^", lig, "\\(.*\\)\\s"), seed_species))
-  
+
   # Check that the ligand was found
   if (length(neutral_lig) == 0) {
     stop(paste("Ligand ", lig, "not present in bngl file!"))
   }
-  
+
   # Create observable
   bngl <- insert(bngl, paste("Molecules", lig, paste0(lig, "()"), sep="\t"), which(bngl == "end observables"))
 
@@ -204,12 +191,12 @@ for (lig in ligands) {
   prod_func <- paste0(lig, "_prod_func() = lig_prod * abs(MaxLigand - ", lig, ")")
   deg_func <- paste0(lig, "_deg_func() = lig_deg * ", lig)
   bngl <- insert(bngl, c(prod_func, deg_func), which(bngl == "end functions"))
-  
+
   # Create synthesis/degradation reactions
   syn <- paste0("0 -> ", neutral_lig, " ", lig, "_prod_func()")
   deg <- paste0(lig, " -> 0 ", lig, "_deg_func() DeleteMolecules")
   bngl <- insert(bngl, c(syn, deg), which(bngl == "end reaction rules"))
-  
+
   # Set initial concentration of the ligand to 0
   bngl[grepl(paste0("^Num", lig, "\\s"), bngl)] <- paste0("Num", lig, " 0")
 }

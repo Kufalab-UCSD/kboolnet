@@ -5,7 +5,7 @@
 # Adrian C
 #
 # Script to download a model and plot each of its
-# modules along with 
+# modules along with
 #################################################
 
 ################# Library loading ##################
@@ -50,25 +50,12 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, `no-domains`=FALSE)
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -104,15 +91,15 @@ if (opt$minQuality < 0) {
 # If GDrive file provided
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
-  
+
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
-  
+
 # If local file provided
 } else {
   masterFile <- normalizePath(opt$file)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
     stop("rxncon file must be an Excel file (.xslx extension)")
@@ -140,12 +127,12 @@ for (module in modules) {
   suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
                                                                    "--modules", paste0('"', paste0(module, collapse=","), '"'), "--quality", minQuality,
                                                                    "--output", modulesFile), stderr = TRUE, stdout = ""))
-  
+
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
   }
-  
+
   # Plot regulatory graph
   cat(paste0("Plotting module ", module, "..."), "\n")
   unlink(paste0(outPath, "module_", module, "_reg.xgmml"))
@@ -156,7 +143,7 @@ for (module in modules) {
     suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile,
                                                                      "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
   }
-                   
+
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during module plotting. Please run rxncon2regulatorygraph.py on its own with the -v DEBUG flag.")
@@ -186,7 +173,7 @@ if (opt$`no-domains`) {
   suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile,
                                                                    "--output", "all_modules"), stderr = TRUE, stdout = ""))
 }
-                 
+
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
   stop("Error during module plotting. Please run rxncon2regulatorygraph.py on its own with the -v DEBUG flag.")

@@ -59,25 +59,12 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, inputInhibs=NA, inputStimuli=NA, outputs=NA)
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -126,15 +113,15 @@ if (opt$minQuality < 0) {
 # If GDrive file provided
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
-  
+
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
-  
+
 # If local file provided
 } else {
   masterFile <- normalizePath(opt$file)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
     stop("rxncon file must be an Excel file (.xslx extension)")
@@ -280,10 +267,10 @@ newResults <- results[0,,drop=F]
 for (i in 1:ncol(combinations)) { # For each input
   # Get the combinations in which which input is present
   inputPresent <- which(combinations[,i])
-  
+
   # If there is no variation in the output value when the input is present
   identicalCols <- apply(results[inputPresent,], 2, function(x) {(max(x) - min(x)) == 0})
-  if (all(identicalCols)) { 
+  if (all(identicalCols)) {
     # Append it to newCombinations and newResults
     newResults[nrow(newResults) + 1,] <- results[inputPresent[1],,]
     newCombinations[nrow(newCombinations) + 1,] <- rep("*", ncol(combinations)) # Set all inputs to *

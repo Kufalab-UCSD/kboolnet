@@ -44,7 +44,7 @@ simulateWithLigands <- function(network, states, names, ligands) {
     states[grepl(paste0(ligands[lig], "_.*--0$"), names)] <- 1
     states[grepl(paste0(ligands[lig], "_.*-\\{0\\}$"), names)] <- 1
   }
-  
+
   # Simulate and return
   return(getPathAndAttractor(network, states, names))
 }
@@ -55,7 +55,7 @@ simulateWithoutLigands <- function(network, states, names, ligands) {
     states <- unbindLigand(ligands[lig], names, states)
     states[names %in% ligNodesNames] <- 0
   }
-  
+
   # Simulate and return
   return(getPathAndAttractor(network, states, names))
 }
@@ -92,25 +92,12 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  source(opt$config)
-
-  if (!exists("config")) {
-    stop("No config object found in config file")
-  }
-
-  config <- config[!is.na(config)] # Discard NA values
-
-  # Keep only config values that were not passed as command line options
-  config <- config[!(names(config) %in% names(opt))]
-
-  # Merge command line args and config values
-  opt <- c(opt, config)
+  opt <- loadConfig(opt, config)
 }
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20, inhib="")
-default <- default[!(names(default) %in% names(opt))]
-opt     <- c(opt, default)
+opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -168,15 +155,15 @@ if (opt$rounds < 2) {
 # If GDrive file provided
 if (!(is.na(opt$driveFile))) {
   cat("Downloading rxncon file from Google Drive...", "\n")
-  
+
   # Download file
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
-  
+
 # If local file provided
 } else {
   masterFile <- normalizePath(opt$file)
-  
+
   # File verification
   if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
     stop("rxncon file must be an Excel file (.xslx extension)")
@@ -232,7 +219,7 @@ for (i in 1:length(ligands)) {
   # Make sure the ligand exists in a neutral state
   if (!(any(grepl(paste0("^", ligands[i], "(_.*--0|_.*-\\{0\\})$"), initStates$name)))) {
     stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
-  } 
+  }
 
   # Make a regex matching unbound, and modified forms of ligand
   ligRegex <- paste0("(", c(paste0(ligands[i], "_.*--0"), paste0("^", ligands[i], "$"),
@@ -240,7 +227,7 @@ for (i in 1:length(ligands)) {
   ligMatch <- grepl(ligRegex, symbolMapping$name)
   ligNodes <- c(ligNodes, symbolMapping$ID[ligMatch])
   ligNodesNames <- c(ligNodesNames, symbolMapping$name[ligMatch])
-  
+
   cat("Ligand", ligands[i], "matched to node(s)", paste0(symbolMapping$name[ligMatch], collapse=", "), "\n")
 }
 
@@ -274,19 +261,19 @@ cat("Done.", "\n")
 for (i in 2:maxrounds) {
   rounds <- rounds + 1
   cat("Simulation round", rounds, "... ")
-  
+
   roundLigAttr   <- list()
   roundLigPath    <- list()
   roundNoLigAttr <- list()
   roundNoLigPath  <- list()
-  
+
   # Simulate without ligand using each state of previous w/ ligand attractor as an initial state
   for (j in 1:ncol(ligAttr[[i-1]])) {
     res <- simulateWithoutLigands(network, ligAttr[[i-1]][,j], initStates$name, ligands)
     roundNoLigAttr[[j]] <- res$attractor
     roundNoLigPath[[j]] <- res$path
   }
-  
+
   # Compare no ligand attractors to each other
   roundNoLigCompScores <- matrix(nrow = length(roundNoLigAttr), ncol = length(roundNoLigAttr))
   for (j in 1:length(roundNoLigAttr)) {
@@ -294,7 +281,7 @@ for (i in 2:maxrounds) {
       roundNoLigCompScores[j,k] <- 1 - attractorDistance(roundNoLigAttr[[j]], roundNoLigAttr[[k]])
     }
   }
-  
+
   if (any(roundNoLigCompScores != 1, na.rm=T)) { # If dissimilar attractors found
     warning("No-ligand attractors in round ", rounds, " are not consistent, possibly indicating \"trap\" states! Using most dissimilar attractor to continue.")
     # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
@@ -308,14 +295,14 @@ for (i in 2:maxrounds) {
     noLigAttr[[i]] <- roundNoLigAttr[[1]]
     noLigPath[[i]] <- roundNoLigPath[[1]]
   }
-  
+
   # Simulate with ligand using each state of previous no ligand attractor as an initial state
   for (j in 1:ncol(noLigAttr[[i]])) {
     res <- simulateWithLigands(network, noLigAttr[[i]][,j], initStates$name, ligands)
     roundLigAttr[[j]] <- res$attractor
     roundLigPath[[j]] <- res$path
   }
-  
+
   # Compare with ligand attractors to each other
   roundLigCompScores <- matrix(nrow = length(roundLigAttr), ncol = length(roundLigAttr))
   for (j in 1:length(roundLigAttr)) {
@@ -323,7 +310,7 @@ for (i in 2:maxrounds) {
       roundLigCompScores[j,k] <- 1 - attractorDistance(roundLigAttr[[j]], roundLigAttr[[k]])
     }
   }
-  
+
   if (any(roundLigCompScores != 1, na.rm=T)) { # If dissimilar attractors found
     warning("With-ligand attractors in round ", rounds, " are not consistent, possibly indicating \"trap\" states! Using most dissimilar attractor to continue.")
     # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
@@ -337,20 +324,20 @@ for (i in 2:maxrounds) {
     ligAttr[[i]] <- roundLigAttr[[1]]
     ligPath[[i]] <- roundLigPath[[1]]
   }
-  
+
   cat("Done.", "\n")
-  
+
   # Compare this round of simulation to previous rounds
   for (j in 1:rounds) {
     scoreLig[j,rounds] <- 1 - attractorDistance(ligAttr[[rounds]], ligAttr[[j]])
     scoreNoLig[j,rounds] <- 1 - attractorDistance(noLigAttr[[rounds]], noLigAttr[[j]])
   }
-  
+
   # If both ligand and no-ligand simulations are identical to a previous round, then we know a
   # "meta-attractor" has been found and we can stop simulation
   if (rounds != 1 & any(scoreLig[1:rounds-1,rounds] == 1) & any(scoreNoLig[1:rounds-1,rounds] == 1)) {
     cat("Meta-attractor found! Stopping simulation.", "\n")
-    
+
     if (rounds > 2) {
       warning("Meta-attractor found after more than 2 rounds. This indicates possible traps/irreversible modifications.")
     }
@@ -376,7 +363,7 @@ dir.create(paste0(outPath, "nolig/"))
 dir.create(paste0(outPath, "nolig/attractor/"))
 dir.create(paste0(outPath, "nolig/path/"))
 
-# Write comparison data 
+# Write comparison data
 write.csv(scoreLig, file = paste0(outPath, "lig/simulation_comparison.csv"))
 write.csv(scoreNoLig, file = paste0(outPath, "nolig/simulation_comparison.csv"))
 
@@ -428,7 +415,7 @@ for (i in 1:rounds) {
   plotPath(path = ligAttr[[i]], filePath = paste0(outPath, "lig/attractor/", i, ".pdf"))
   write.csv(ligPath[[i]], file = paste0(outPath, "lig/path/" , i, ".csv"))
   write.csv(ligAttr[[i]], file = paste0(outPath, "lig/attractor/" , i, ".csv"))
-  
+
   # Plot no ligand paths/attractors
   plotPath(path = noLigPath[[i]], filePath = paste0(outPath, "nolig/path/" , i, ".pdf"))
   plotPath(path = noLigAttr[[i]], filePath = paste0(outPath, "nolig/attractor/", i, ".pdf"))
