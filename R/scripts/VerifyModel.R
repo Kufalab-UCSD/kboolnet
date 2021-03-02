@@ -67,10 +67,6 @@ option_list = list(
   make_option(c("--config", "-c"), action="store", default=NA, type="character",
               help="Path of config file. You can specify parameters here instead of passing them as command-line
               arguments"),
-  make_option("--kboolnetPath", action="store", default=NA, type="character",
-              help="Path to root directory of kboolnet repository"),
-  make_option("--rxnconPath", action="store", default=NA, type="character",
-              help="Path to directory containing rxncon scripts"),
   make_option("--file", action="store", default=NA, type="character",
               help="Path of master rxncon file (local)"),
   make_option("--driveFile", action="store", default=NA, type="character",
@@ -107,8 +103,6 @@ if (!dir.exists(opt$out)) {
 
 # Normalize paths
 outPath       <- paste0(normalizePath(opt$out), "/")
-kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
-rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])

@@ -22,8 +22,6 @@ option_list = list(
   make_option(c("--config", "-c"), action="store", default=NA, type="character",
               help="Path of config file. You can specify parameters here instead of passing them as command-line
               arguments"),
-  make_option("--kboolnetPath", action="store", default=NA, type="character",
-              help="Path to root directory of kboolnet repository"),
   make_option(c("--file", "-f"), action="store", default=NA, type="character",
               help="Name of csv file containing path/attractor to be plotted"),
   make_option(c("--nodes", "-n"), action="store", default=NA, type="character",
@@ -54,12 +52,6 @@ if (is.na(opt$file)) {
 
 # Process the nodes argument into a list
 nodes <- trimws(strsplit(opt$nodes, ",")[[1]])
-
-# Normalize paths
-kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
-
-# Load plot function
-suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
 
 ################# Path loading/processing/plotting ##################
 # Load path and set first col as row names
