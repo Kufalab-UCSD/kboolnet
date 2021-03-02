@@ -109,7 +109,7 @@ plotDiffs <- function(diffs, file = NA) {
     scale_y_continuous(limits = c(0,1), expand = c(0,0)) + scale_x_continuous(limits = c(0,1), expand = c(0,0)) +
     # xlab("Output") + ylab("KO") +
     theme(axis.text = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(), strip.background = element_blank(),
-          strip.text.x = element_text(angle = 90, hjust = 0), strip.text.y = element_text(angle = 180, hjust = 0))
+          strip.text.x = element_text(angle = 90, hjust = 0))
 
   if (!is.na(file)) {
     width = length(unique(diffsGather$signal)) * .5 + 3
@@ -248,6 +248,7 @@ if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
   stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
 }
+cat("Done.\n")
 
 ################# Load BoolNet files ######################
 # Load network
