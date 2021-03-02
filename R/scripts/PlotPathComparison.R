@@ -13,6 +13,7 @@
 suppressMessages(library(ggplot2))
 library(tidyr)
 library(optparse)
+library(kboolnet)
 
 ############# Argument parsing and handling ############
 

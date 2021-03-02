@@ -19,6 +19,7 @@ suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
 suppressMessages(library(egg))
+library(kboolnet)
 
 ################# Argument parsing #################
 # Get commandline args
@@ -80,16 +81,6 @@ outPath       <- paste0(normalizePath(opt$out), "/")
 kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
 rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
 
-# Load functions
-suppressMessages(source(paste0(kboolnetPath, "R/functions/plotPath.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/unbindLigand.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/fixedNetwork.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/readMIDASExcel.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/plotMIDAS.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/plotMIDASComp.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
-
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
 cell_types <- trimws(strsplit(opt$celltype, ",")[[1]])
@@ -133,7 +124,8 @@ if (!(is.na(opt$rxnconDriveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules... ")
-suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
+path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
+suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
                                                                  "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -145,7 +137,8 @@ cat("Done.", "\n")
 # Pass files to rxncon for processing
 cat("Generating BoolNet files... ")
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-suppressWarnings(stderr <- system2("python3", args = c(paste0(rxnconPath, "rxncon2boolnet.py"), modulesFile, "--output",
+path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
+suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))

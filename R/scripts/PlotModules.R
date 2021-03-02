@@ -122,7 +122,8 @@ for (module in modules) {
   # Extract the module
   modulesFile <- paste0(outPath, paste0("module_", module, ".xlsx"))
   cat(paste0("Extracting module ", module, "..."), "\n")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
+  path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
+  suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
                                                                    "--modules", paste0('"', paste0(module, collapse=","), '"'), "--quality", minQuality,
                                                                    "--output", modulesFile), stderr = TRUE, stdout = ""))
 
@@ -135,10 +136,12 @@ for (module in modules) {
   cat(paste0("Plotting module ", module, "..."), "\n")
   unlink(paste0(outPath, "module_", module, "_reg.xgmml"))
   if (opt$`nodomains`) {
-    suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile, "--nodomains",
+    path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+    suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile, "--nodomains",
                                                                      "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
   } else {
-    suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile,
+    path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+    suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
                                                                      "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
   }
 
@@ -152,7 +155,8 @@ for (module in modules) {
 # Get all module file
 modulesFile <- paste0(outPath, "all_modules.xlsx")
 cat("Extracting all modules ...", "\n")
-suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
+path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
+suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
                                                                   "--modules", "' '", "--quality", minQuality,
                                                                   "--output", modulesFile), stderr = TRUE, stdout = ""))
 
@@ -165,11 +169,12 @@ if (any(grepl("Error", stderr, ignore.case = TRUE))) {
 unlink(paste0(outPath, "all_modules_reg.xgmml"))
 cat(paste0("Plotting all modules..."), "\n")
 if (opt$`nodomains`) {
-  (stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile, "--nodomains",
+  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+  suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
                                                                    "--output", "all_modules"), stderr = TRUE, stdout = ""))
-  print(stderr)
 } else {
-  suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile,
+  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+  suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
                                                                    "--output", "all_modules"), stderr = TRUE, stdout = ""))
 }
 

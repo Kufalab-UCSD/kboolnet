@@ -17,6 +17,7 @@ suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
 suppressMessages(library(numbers))
+library(kboolnet)
 
 ################ Function definitions #################
 insert <- function(vector, elems, index) {
@@ -83,9 +84,6 @@ kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
 rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
 BNGPath       <- paste0(normalizePath(opt$BNGPath), "/")
 
-# Load functions
-suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
-
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
 
@@ -145,7 +143,8 @@ if (!(is.na(opt$driveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
-suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/extract_modules.py"), "--file", masterFile,
+path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
+suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
                                                                  "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -156,7 +155,8 @@ if (any(grepl("Error", stderr, ignore.case = TRUE))) {
 
 # Pass files to rxncon for processing
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-suppressWarnings(stderr <- system2("python3", args = c(paste0(rxnconPath, "rxncon2bngl.py"), modulesFile, "--output",
+path <- paste0(system.file(package="kboolnet"), "/python/rxncon2bngl.py")
+suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))

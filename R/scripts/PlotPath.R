@@ -14,6 +14,7 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(optparse))
+library(kboolnet)
 
 ############### Argument parsing and setup ###################
 # Get commandline args
