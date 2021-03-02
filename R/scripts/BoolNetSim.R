@@ -5,6 +5,7 @@ suppressMessages(library(BoolNet))
 suppressMessages(library(ggplot2))
 suppressMessages(library(tidyr))
 suppressMessages(library(optparse))
+library(kboolnet)
 
 #############################################################
 # Disclaimer
@@ -20,8 +21,10 @@ suppressMessages(library(optparse))
 
 # accept network as commandline argument
 option_list = list(
-  make_option("--model", action="store", default=NA, type='character',
-              help="Prefix of model to be simulated")
+  make_option(c("--model", "-m"), action="store", default=NA, type='character',
+              help="Prefix of model to be simulated"),
+  make_option(c("--noplot", "-n"), action="store_true", default=FALSE,
+              help="Do not write plots to pdf. May be necessary for larger models")
 )
 opt = parse_args(OptionParser(option_list=option_list))
 
@@ -58,10 +61,13 @@ getOrder <- function(path) {
   for(i in (ncol(orderSimPath)-1):1){
     orderSimPath <- orderSimPath[order(orderSimPath[,i], decreasing = T), ]
   }
+  return(orderSimPath[,ncol(orderSimPath)])
 }
 pathOrder <- getOrder(res$path)
 attractorOrder <- getOrder(res$attractor)
 
 # Save plots
-plotPath(res$path[pathOrder,], paste0(filePrefix, '_path.pdf'))
-plotPath(res$attractor[attractorOrder,], paste0(filePrefix, '_attractor.pdf'))
+if (!opt$noplot) {
+  plotPath(res$path[pathOrder,,drop=F], paste0(filePrefix, '_path.pdf'))
+  plotPath(res$attractor[attractorOrder,,drop=F], paste0(filePrefix, '_attractor.pdf'))
+}
