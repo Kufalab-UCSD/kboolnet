@@ -18,6 +18,7 @@ suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
 suppressMessages(library(numbers))
 suppressMessages(library(xml2))
+library(kboolnet)
 
 ################ Function definitions #################
 
@@ -42,7 +43,7 @@ option_list = list(
               help="Minimum quality for rule to be loaded [default: 0]"),
   make_option(c("--out", "-o"), action="store", default=NA, type="character",
               help="Folder to which output files will be written [default: ./out/]"),
-  make_option(c("--no-domains", "-n"), action="store_true", default=NA,
+  make_option(c("--nodomains", "-n"), action="store_true", default=NA,
               help="Remove domains from graph outputs [default: don't remove]")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
@@ -54,7 +55,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, `no-domains`=FALSE)
+default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, `nodomains`=FALSE)
 opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
@@ -66,9 +67,6 @@ if (!dir.exists(opt$out)) {
 outPath       <- paste0(normalizePath(opt$out), "/")
 kboolnetPath  <- paste0(normalizePath(opt$kboolnetPath), "/")
 rxnconPath    <- paste0(normalizePath(opt$rxnconPath), "/")
-
-# Load functions
-suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
@@ -136,8 +134,8 @@ for (module in modules) {
   # Plot regulatory graph
   cat(paste0("Plotting module ", module, "..."), "\n")
   unlink(paste0(outPath, "module_", module, "_reg.xgmml"))
-  if (opt$`no-domains`) {
-    suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile, "--no-domains",
+  if (opt$`nodomains`) {
+    suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile, "--nodomains",
                                                                      "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
   } else {
     suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile,
@@ -166,9 +164,10 @@ if (any(grepl("Error", stderr, ignore.case = TRUE))) {
 # Plot regulatory graph
 unlink(paste0(outPath, "all_modules_reg.xgmml"))
 cat(paste0("Plotting all modules..."), "\n")
-if (opt$`no-domains`) {
-  suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile, "--no-domains",
+if (opt$`nodomains`) {
+  (stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile, "--nodomains",
                                                                    "--output", "all_modules"), stderr = TRUE, stdout = ""))
+  print(stderr)
 } else {
   suppressWarnings(stderr <- system2(command = "python3", args = c(paste0(kboolnetPath, "Python/rxncon2regulatorygraph.py"), modulesFile,
                                                                    "--output", "all_modules"), stderr = TRUE, stdout = ""))
