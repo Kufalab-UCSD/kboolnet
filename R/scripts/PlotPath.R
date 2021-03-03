@@ -72,13 +72,7 @@ if (length(nodes) > 0) {
 
 # Remove domain names if requested
 if (opt$nodomains) {
-  newNames <- gsub("_\\[.*?\\]", "", rownames(path))
-
-  # If there are ambigious names due to domain simplification, replace them with the old names
-  ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
-  newNames[ambigNames] <- rownames(path)[ambigNames]
-
-  rownames(path) <- newNames
+  rownames(path) <- removeDomains(path)
 }
 
 plotPath(path, opt$out, ratio=opt$ratio)

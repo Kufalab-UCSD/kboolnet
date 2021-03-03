@@ -146,14 +146,8 @@ if (length(nodes) != 0) {
 
 # Remove domain information if requested
 if (opt$nodomains) {
-  newNames <- gsub("_\\[.*?\\]", "", rownames(mats[[1]]))
-
-  # If there are ambigious names due to domain simplification, replace them with the old names
-  ambigNames <- duplicated(newNames) | duplicated(newNames, fromLast = T)
-  newNames[ambigNames] <- rownames(mats[[1]])[ambigNames]
-
-  rownames(mats[[1]]) <- newNames
-  rownames(mats[[2]]) <- newNames
+  rownames(mats[[1]]) <- removeDomains(rownames(mats[[1]]))
+  rownames(mats[[2]]) <- removeDomains(rownames(mats[[2]]))
 }
 
 # Get rows with not matching values

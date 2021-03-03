@@ -51,7 +51,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, `nodomains`=FALSE)
+default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, nodomains=FALSE)
 opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
@@ -129,14 +129,11 @@ for (module in modules) {
   # Plot regulatory graph
   cat(paste0("Plotting module ", module, "..."), "\n")
   unlink(paste0(outPath, "module_", module, "_reg.xgmml"))
-  if (opt$`nodomains`) {
-    path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-    suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile, "--nodomains",
-                                                                     "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
-  } else {
-    path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-    suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
-                                                                     "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
+  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+  suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
+                                                                   "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
+  if (opt$nodomains) {
+    removeDomainsXGMML(paste0(outPath, "module_", module, "_reg.xgmml"), paste0(outPath, "module_", module, "_reg.xgmml"))
   }
 
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -162,14 +159,11 @@ if (any(grepl("Error", stderr, ignore.case = TRUE))) {
 # Plot regulatory graph
 unlink(paste0(outPath, "all_modules_reg.xgmml"))
 cat(paste0("Plotting all modules..."), "\n")
+path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
+                                                                 "--output", "all_modules"), stderr = TRUE, stdout = ""))
 if (opt$`nodomains`) {
-  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
-                                                                   "--output", "all_modules"), stderr = TRUE, stdout = ""))
-} else {
-  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
-                                                                   "--output", "all_modules"), stderr = TRUE, stdout = ""))
+  removeDomainsXGMML(paste0(outPath, "all_modules_reg.xgmml"), paste0(outPath, "all_modules_reg.xgmml"))
 }
 
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
