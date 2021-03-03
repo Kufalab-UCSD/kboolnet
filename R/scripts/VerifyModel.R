@@ -179,7 +179,6 @@ netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
 path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
 suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
-print(stderr)
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
   stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
@@ -398,10 +397,10 @@ plotOrder <- orderSimPath[,ncol(orderSimPath)]
 
 for (i in 1:rounds) {
   # Reorder the paths
-  ligPath[[i]] <- ligPath[[i]][plotOrder,]
-  ligAttr[[i]] <- ligAttr[[i]][plotOrder,]
-  noLigPath[[i]] <- noLigPath[[i]][plotOrder,]
-  noLigAttr[[i]] <- noLigAttr[[i]][plotOrder,]
+  ligPath[[i]] <- ligPath[[i]][plotOrder,,drop=F]
+  ligAttr[[i]] <- ligAttr[[i]][plotOrder,,drop=F]
+  noLigPath[[i]] <- noLigPath[[i]][plotOrder,,drop=F]
+  noLigAttr[[i]] <- noLigAttr[[i]][plotOrder,,drop=F]
 
   # Plot ligand paths/attractors
   plotPath(path = ligPath[[i]], filePath = paste0(outPath, "lig/path/" , i, ".pdf"))
