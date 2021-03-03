@@ -123,15 +123,16 @@ if (!(is.na(opt$driveFile))) {
 
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
-cat("Extracting modules...", "\n")
-path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
-suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
-                                                       netFilePrefix), stderr = TRUE, stdout = ""))
+cat("Extracting modules... ")
+path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
+suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
+                                                                 "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
+                                                                 "--output", modulesFile), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
   stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
 }
-
+cat("Done.\n")
 
 # Pass files to rxncon for processing
 cat("Generating BoolNet files... ")
@@ -243,7 +244,7 @@ for (i in 1:rounds) {
   # Save data
   for (j in 1:length(outputs)) {
     outNodes <- symbolMapping$name[grepl(outputsRegex[j], symbolMapping$name)]
-    results[i, outputs[j]] <- mean(attractor[outNodes,,drop=FALSE])
+    results[i, outputs[j]] <- mean(as.matrix(attractor[outNodes,,drop=FALSE]))
   }
   attractors[[i]] <- attractor
 
