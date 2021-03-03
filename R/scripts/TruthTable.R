@@ -71,10 +71,6 @@ if (!dir.exists(opt$out)) {
 # Normalize paths
 outPath       <- paste0(normalizePath(opt$out), "/")
 
-# Load functions
-suppressMessages(source(paste0(kboolnetPath, "R/functions/driveDownload.R")))
-suppressMessages(source(paste0(kboolnetPath, "R/functions/getPathAndAttractor.R")))
-
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
 
