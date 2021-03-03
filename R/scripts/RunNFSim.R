@@ -66,7 +66,7 @@ if ("config" %in% names(opt)) {
 }
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, time=20, inhib="")
+default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, time=20, inhib="", KO="")
 opt <- setDefaults(opt, default)
 
 # Create out dir if it does not exist
@@ -154,7 +154,7 @@ suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--out
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
-  stop("Error during BoolNet file generation. Please run rxncon2bngl.py on its own with the -v DEBUG flag.")
+  stop("Error during BNG file generation. Please run rxncon2bngl.py on its own with the -v DEBUG flag.")
 }
 
 ############### Generate NFsim files ######################
