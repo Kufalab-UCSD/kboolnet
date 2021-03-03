@@ -176,9 +176,10 @@ cat("Done.\n")
 # Pass files to rxncon for processing
 cat("Generating BoolNet files... ")
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py.py")
+path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
 suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
                                                        netFilePrefix), stderr = TRUE, stdout = ""))
+print(stderr)
 if (any(grepl("Error", stderr, ignore.case = TRUE))) {
   cat(paste(stderr, "\n"))
   stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
