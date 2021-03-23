@@ -14,12 +14,12 @@
 ########################################
 
 getPathAndAttractor <- function(network, states, names=NULL) {
-  path <- t(BoolNet::getPathToAttractor(network, states)) # Simulate the path
+  path <- as.data.frame(t(BoolNet::getPathToAttractor(network, states))) # Simulate the path
   rownames(path) <- names
   states <- path[,ncol(path)] # Use last path state as new start for attractor
-  attractor <- t(BoolNet::getPathToAttractor(network, states)) # Get the attractor
+  attractor <- as.data.frame(t(BoolNet::getPathToAttractor(network, states))) # Get the attractor
   attractor <- attractor[,1:(ncol(attractor)-1), drop=FALSE] # Remove last repeated column from attractor
   rownames(attractor) <- names
-  
+
   return(list("path" = path, "attractor" = attractor))
 }

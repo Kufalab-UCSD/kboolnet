@@ -1,6 +1,4 @@
 plotPathOverlap <- function(path1, path2, filePath = "", ratio = 0.8) {
-  path1 <- as.data.frame(path1)
-  path2 <- as.data.frame(path2)
   path_length   <- ncol(path1)
   colnames(path1) <- sprintf("t%03d", 0:(path_length-1)) # Replace t..0 with t000
   colnames(path2) <- sprintf("t%03d", 0:(path_length-1)) # Replace t..0 with t000

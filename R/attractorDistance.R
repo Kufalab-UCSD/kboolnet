@@ -14,7 +14,7 @@
 # 
 # Returns: numerical similarity value
 # 
-# Depends on: BoolNet, numbers
+# Depends on: numbers
 # ###################################################
 
 hamming <- function(vec1, vec2) {
