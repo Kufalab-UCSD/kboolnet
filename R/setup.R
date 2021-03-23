@@ -31,9 +31,6 @@ setupKboolnet <- function() {
   oldInstallDir <- defaults$value[defaults$setting == "installDir"]
   installed <- as.logical(defaults$value[defaults$setting == "installed"])
 
-  print("Installed?")
-  print(installed)
-
   cat("Manual configuration entry. Leave response blank to keep default/previous settings.\n")
   # If already installed, ask if we want to reinstall
   reinstall <- FALSE
@@ -118,12 +115,12 @@ setupKboolnet <- function() {
   newDefaults <- data.frame(setting = c("rxnconDir", "BNGDir", "installDir", "installed"),
                             value = c(newRxnconDir, newBNGDir, newInstallDir, TRUE))
   write.csv(newDefaults, file = configFile, row.names = FALSE)
-  print(configFile)
   cat("Configuration successfully set.\n")
 
 }
 
 sensibleDefaults <- function() {
+  print(Home())
   res <- data.frame(setting = character(), value = character())
 
   # Detect rxncon script install dir
@@ -139,7 +136,7 @@ sensibleDefaults <- function() {
   }
 
   # Try and find BioNetGen somwhere in the home directory
-  homeFiles <- list.dirs("~")
+  homeFiles <- list.dirs(Home())
   bngDir <- homeFiles[grepl("BioNetGen", homeFiles)]
   bngDir <- bngDir[which.min(sapply(bngDir, length))]
 
@@ -148,10 +145,26 @@ sensibleDefaults <- function() {
   }
 
   # Set arbitrary dir as install directory
-  res[nrow(res) + 1,] <- c("installDir", suppressWarnings(normalizePath("~/kboolnet_scripts")))
+  res[nrow(res) + 1,] <- c("installDir", suppressWarnings(normalizePath(paste0(Home(), "/kboolnet_scripts"))))
 
   # Set installed as false
   res[nrow(res) + 1,] <- c("installed", FALSE)
 
   return(res)
 }
+
+Home <- function() {
+  # Returns a string with the user's home directory
+  #
+  # Serves as a replacement for "~", and works both in RStudio and RScript.
+  #
+  # Returns:
+  #   On Windows returns C:/Users/<username>, where <username> is the current user's username.
+
+  if (.Platform$OS.type == "windows") {
+    return(normalizePath(file.path(Sys.getenv("HOMEDRIVE"), Sys.getenv("HOMEPATH")), winslash = .Platform$file.sep))
+  } else {
+    return(normalizePath("~"))
+  }
+}
+
