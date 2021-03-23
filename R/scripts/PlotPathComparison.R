@@ -52,7 +52,6 @@ if (is.na(opt$pathA) | is.na(opt$pathB)) {
 }
 
 output <- opt$output
-print(opt$nodes)
 nodes <- trimws(strsplit(opt$nodes, ",")[[1]])
 
 ############## The Actual Code™ ###############
@@ -140,6 +139,10 @@ mats[[shortMat]] <- tmp
 
 # Order rows according to nodes argument
 if (length(nodes) != 0) {
+  missing <- nodes[!nodes %in% rownames(mats[[1]])]
+  if (length(missing) > 0) {
+    stop(paste0("Node(s) ", paste(missing, collapse = ", "), " not found in attractor. Make sure to reference full names, including domains."))
+  }
   mats[[1]] <- mats[[1]][nodes,,drop=F]
   mats[[2]] <- mats[[2]][nodes,,drop=F]
 }
@@ -152,6 +155,14 @@ if (opt$nodomains) {
 
 # Get rows with not matching values
 diffRows <- rowSums(mats[[1]] - mats[[2]]) != 0
+
+# Covert to data frame
+pathRowNames <- rownames(mats[[1]])
+mats[[1]] <- as.data.frame(mats[[1]])
+mats[[2]] <- as.data.frame(mats[[2]])
+rownames(mats[[1]]) <- pathRowNames
+rownames(mats[[2]]) <- pathRowNames
+
 
 ############### Plotting ################
 # Plot entire path
