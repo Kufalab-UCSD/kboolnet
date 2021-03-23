@@ -114,31 +114,17 @@ modules <- unique(modules)
 ############## Module extraction and plotting ####################
 for (module in modules) {
   # Extract the module
-  modulesFile <- paste0(outPath, paste0("module_", module, ".xlsx"))
+  modulesFile <- paste0(outPath, "module_", module, ".xlsx")
   cat(paste0("Extracting module ", module, "..."), "\n")
-  path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
-                                                                   "--modules", paste0('"', paste0(module, collapse=","), '"'), "--quality", minQuality,
-                                                                   "--output", modulesFile), stderr = TRUE, stdout = ""))
+  callExtractModules(masterFile, modulesFile, module)
 
-  if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-    cat(paste(stderr, "\n"))
-    stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
-  }
-
-  # Plot regulatory graph
   cat(paste0("Plotting module ", module, "..."), "\n")
-  unlink(paste0(outPath, "module_", module, "_reg.xgmml"))
-  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
-                                                                   "--output", paste0("module_", module)), stderr = TRUE, stdout = ""))
-  if (opt$nodomains) {
-    removeDomainsXGMML(paste0(outPath, "module_", module, "_reg.xgmml"), paste0(outPath, "module_", module, "_reg.xgmml"))
-  }
+  regFile <- paste0(outPath, "module_", module, "_reg.xgmml")
+  callRxncon2Reg(modulesFile, regFile)
 
-  if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-    cat(paste(stderr, "\n"))
-    stop("Error during module plotting. Please run rxncon2regulatorygraph.py on its own with the -v DEBUG flag.")
+
+  if (opt$nodomains) {
+    removeDomainsXGMML(regFile, regFile)
   }
 }
 
@@ -146,31 +132,16 @@ for (module in modules) {
 # Get all module file
 modulesFile <- paste0(outPath, "all_modules.xlsx")
 cat("Extracting all modules ...", "\n")
-path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
-suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
-                                                                  "--modules", "' '", "--quality", minQuality,
-                                                                  "--output", modulesFile), stderr = TRUE, stdout = ""))
-
-if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-  cat(paste(stderr, "\n"))
-  stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
-}
+callExtractModules(masterFile, modulesFile, "")
 
 # Plot regulatory graph
-unlink(paste0(outPath, "all_modules_reg.xgmml"))
+regFile <- paste0(outPath, "all_modules_reg.xgmml")
 cat(paste0("Plotting all modules..."), "\n")
-path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-suppressWarnings(stderr <- system2(command = "python3", args = c(path, modulesFile,
-                                                                 "--output", "all_modules"), stderr = TRUE, stdout = ""))
+callRxncon2Reg(modulesFile, regFile)
+
 if (opt$`nodomains`) {
-  removeDomainsXGMML(paste0(outPath, "all_modules_reg.xgmml"), paste0(outPath, "all_modules_reg.xgmml"))
+  removeDomainsXGMML(paste0(outPath, "all_modules_reg.xgmml"),)
 }
-
-if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-  cat(paste(stderr, "\n"))
-  stop("Error during module plotting. Please run rxncon2regulatorygraph.py on its own with the -v DEBUG flag.")
-}
-
 
 # Load xgmml file for all module file
 all_modules <- paste0(outPath, "all_modules_reg.xgmml") %>% read_xml()

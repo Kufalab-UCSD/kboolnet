@@ -137,29 +137,15 @@ if (!(is.na(opt$driveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
-path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
-suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
-                                                                 "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
-                                                                 "--output", modulesFile), stderr = TRUE, stdout = ""))
-if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-  cat(paste(stderr, "\n"))
-  stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
-}
-
+callExtractModules(masterFile, modulesFile, modules, mminQuality)
 
 # Pass files to rxncon for processing
+cat("Creating bngl files... ")
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-path <- paste0(system.file(package="kboolnet"), "/python/rxncon2bngl.py")
-suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
-                                                       netFilePrefix), stderr = TRUE, stdout = ""))
-if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-  cat(paste(stderr, "\n"))
-  stop("Error during BNG file generation. Please run rxncon2bngl.py on its own with the -v DEBUG flag.")
-}
+callRxncon2BNG(modulesFile, netFilePrefix)
 
 ############### Generate NFsim files ######################
 # Read in the bngl file
-cat("Creating bngl files... ")
 bngl <- readLines(paste0(netFilePrefix, ".bngl"))
 
 # Add functions section and the new parameters to bngl

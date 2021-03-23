@@ -221,27 +221,13 @@ if (!(is.na(opt$driveFile))) {
 
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
-cat("Extracting modules...", "\n")
-path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
-suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", masterFile,
-                                                                 "--modules", paste0('"', paste0(modules, collapse=","), '"'), "--quality", minQuality,
-                                                                 "--output", modulesFile), stderr = TRUE, stdout = ""))
-if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-  cat(paste(stderr, "\n"))
-  stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
-}
-
+cat("Extracting modules... ")
+callExtractModules(masterFile, modulesFile, modules, minQuality)
 
 # Pass files to rxncon for processing
 cat("Generating BoolNet files... ")
 netFilePrefix <- gsub("\\.xlsx$", "", modulesFile)
-path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
-suppressWarnings(stderr <- system2("python3", args = c(path, modulesFile, "--output",
-                                                       netFilePrefix), stderr = TRUE, stdout = ""))
-if (any(grepl("Error", stderr, ignore.case = TRUE))) {
-  cat(paste(stderr, "\n"))
-  stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
-}
+callRxncon2Boolnet(modulesFile, netFilePrefix)
 cat("Done.\n")
 
 ################# Load BoolNet files ######################
