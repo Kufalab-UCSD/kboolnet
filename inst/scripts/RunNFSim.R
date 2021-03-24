@@ -76,7 +76,6 @@ if (!dir.exists(opt$out)) {
 
 # Normalize paths
 outPath       <- paste0(normalizePath(opt$out), "/")
-BNGPath       <- paste0(normalizePath(opt$BNGPath), "/")
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
@@ -137,7 +136,7 @@ if (!(is.na(opt$driveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
-callExtractModules(masterFile, modulesFile, modules, mminQuality)
+callExtractModules(masterFile, modulesFile, modules, minQuality)
 
 # Pass files to rxncon for processing
 cat("Creating bngl files... ")
@@ -181,16 +180,32 @@ for (lig in ligands) {
   bngl[grepl(paste0("^Num", lig, "\\s"), bngl)] <- paste0("Num", lig, " 0")
 }
 
-# Inhibit the reactions with inhib
+# Adjust reaction rates
 param_idxs <- which(bngl == "begin parameters" | bngl == "end parameters")
 reaction_param_idxs <- which(grepl("^k([_][0-9]+)+", bngl))
 reaction_param_idxs <- reaction_param_idxs[reaction_param_idxs > param_idxs[1] & reaction_param_idxs < param_idxs[2]]
+
+rxnMapFile <- paste0(netFilePrefix, "_mapping.csv")
+callReactionMapping(modulesFile, rxnMapFile)
+mapping <- read.csv(rxnMapFile)
+
+for (i in 1:nrow(mapping)) {
+  rxn_idx <- intersect(which(grepl(mapping$rxnconName[i], bngl, fixed=TRUE)), reaction_param_idxs)
+  if (length(rxn_idx) > 1) {
+    stop(paste0("Reaction ", mapping$rxnconName[i], " is non-unique!"))
+  } else if (length(rxn_idx) == 0) {
+    stop(paste0("Reaction ", mapping$rxnconName[i], " is not present in bngl file."))
+  }
+  bngl[rxn_idx] <- gsub("\\s([0-9]+|[0-9]+\\.|\\.[0-9]+|[0-9]+\\.[0-9]+|\\.[0-9]+)\\s", mapping$rate[i], bngl[rxn_idx])
+}
+
+# Inhibit the reactions with inhib
 for (inhibitor in inhib) {
   inhib_idxs <- intersect(which(grepl(inhibitor, bngl)), reaction_param_idxs)
   if (length(inhib_idxs) < 1) {
     stop(paste0("Reaction ", inhibitor, " is not present in the bngl file."))
   }
-  bngl[inhib_idxs] <- gsub("\\s([0-9]+|[0-9]+\\.|\\.[0-9]+|[0-9]+\\.[0-9]+)\\s", "0.0", bngl[inhib_idxs])
+  bngl[inhib_idxs] <- gsub("\\s([0-9]+|[0-9]+\\.|\\.[0-9]+|[0-9]+\\.[0-9]+|\\.[0-9]+)\\s", "0.0", bngl[inhib_idxs])
 }
 
 # Remove KO components from the system
