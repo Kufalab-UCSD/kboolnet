@@ -53,3 +53,15 @@ callRxncon2Boolnet <- function(inFile, outFile, args=c()) {
     stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
   }
 }
+
+callReactionMapping <- function(inFile, outFile, args=c()) {
+  cleanFiles(outFile)
+  path <- paste0(system.file(package="kboolnet"), "/python/reaction_mapping.py")
+  suppressWarnings(stderr <- system2("python3", args = c(path, inFile, "--output",
+                                                       outFile, args), stderr = TRUE, stdout = ""))
+  if (any(grepl("Error", stderr, ignore.case = TRUE))) {
+    cat(paste(stderr, "\n"))
+    stop("Error during reaction mapping generation. Please run reaction_mapping.py on its own with the -v DEBUG flag.")
+  }
+
+}
