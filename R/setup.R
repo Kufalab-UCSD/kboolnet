@@ -119,8 +119,17 @@ setupKboolnet <- function() {
 
 }
 
+list.dirs.depth.n <- function(p, n) {
+  res <- list.dirs(p, recursive = FALSE)
+  if (n > 1) {
+    add <- list.dirs.depth.n(res, n-1)
+    c(res, add)
+  } else {
+    res
+  }
+}
+
 sensibleDefaults <- function() {
-  print(Home())
   res <- data.frame(setting = character(), value = character())
 
   # Detect rxncon script install dir
@@ -131,16 +140,16 @@ sensibleDefaults <- function() {
   rxnconScripts <- normalizePath(paste0(rxnconBase, "/", rxnconScriptsRel))
   rxnconScripts <- gsub("rxncon2regulatorygraph.py", "", rxnconScripts)
 
-  if (file.exists(rxnconScripts)) {
+  if (dir.exists(rxnconScripts)) {
     res[nrow(res) + 1,] <- c("rxnconDir", rxnconScripts)
   }
 
   # Try and find BioNetGen somwhere in the home directory
-  homeFiles <- list.dirs(Home())
+  homeFiles <- list.dirs.depth.n(Home(), 2)
   bngDir <- homeFiles[grepl("BioNetGen", homeFiles)]
   bngDir <- bngDir[which.min(sapply(bngDir, length))]
 
-  if (file.exists(bngDir)) {
+  if (dir.exists(bngDir)) {
     res[nrow(res) + 1,] <- c("BNGDir", bngDir)
   }
 
