@@ -1,3 +1,16 @@
+getYesNo <- function(prompt, default = TRUE) {
+  res <- trimws(tolower(readline(prompt)))
+  while (TRUE) {
+    if (res %in% c("y", "ye", "yes")) {
+      return(TRUE)
+    } else if (res %in% c("n", "no")) {
+      return(FALSE)
+    } else if (res == "") {
+      return(default)
+    }
+  }
+}
+
 setupKboolnet <- function() {
   if (system2("python3", args = "--version", stdout = FALSE) != 0) {
     stop("Could not run python3. Please install before continuing!")
@@ -36,35 +49,26 @@ setupKboolnet <- function() {
   reinstall <- FALSE
   if (installed) {
     cat(paste0("rxncon alredy installed in directory ", oldInstallDir, ""), "\n")
-    while (TRUE) {
-      reinstall <- tolower(readline("Would you like to reinstall the kboolnet scripts? (y/N): "))
-      if (reinstall %in% c("y", "ye", "yes")) {
-        reinstall <- TRUE
-        break
-      } else if (reinstall %in% c("n", "no", "")) {
-        reinstall <- FALSE
-        break
-      }
-    }
+    reinstall <- getYesNo("Would you like to reinstall the kboolnet scripts? (y/N): ", default = FALSE)
   }
 
   # If installation necessary, prompt for new dir and do the installation
   if (!installed | reinstall) {
     while (TRUE) {
-      newInstallDir <- readline(paste0("Set directory in which to install kboolnet scripts (", oldInstallDir, "): "))
+      newInstallDir <- readline(paste0("Set directory in which to install kboolnet scripts to (", oldInstallDir, "): "))
       if (trimws(newInstallDir) != "") {
         newInstallDir <- normalizePath(newInstallDir)
       } else {
         newInstallDir <- oldInstallDir
       }
 
-      verify <- tolower(readline(paste0("Install kboolnet scripts to dir ", newInstallDir, "? (Y/n): ")))
-      if (!(verify %in% c("y", "ye", "yes", ""))) {
+      verify <- getYesNo(paste0("Install kboolnet scripts to dir ", newInstallDir, "? (Y/n): "), default = TRUE)
+      if (!verify) {
         next
       }
 
       if (length(list.files(newInstallDir)) > 0) {
-        warning(paste0(newInstallDir, " is non-empty. May cause issues."))
+        cat(paste0(newInstallDir, " is non-empty. May cause issues.", "\n"))
       }
 
       dir.create(newInstallDir, recursive = TRUE)
@@ -84,7 +88,7 @@ setupKboolnet <- function() {
 
   # Prompt for rxncon install directory
   while (TRUE) {
-    newRxnconDir <- readline(paste0("Set rxncon2____.py script directory (", oldRxnconDir, "): "))
+    newRxnconDir <- readline(paste0("Set existing rxncon2____.py script directory (", oldRxnconDir, "): "))
     if (trimws(newRxnconDir) != "") {
       newRxnconDir <- normalizePath(newRxnconDir)
     } else {
@@ -98,18 +102,25 @@ setupKboolnet <- function() {
   }
 
   # Prompt for BNG install directory
-  while (TRUE) {
-    newBNGDir <- readline(paste0("Set BioNetGen install directory (", oldBNGDir, "): "))
-    if (trimws(newBNGDir) != "") {
-      newBNGDir <- normalizePath(newBNGDir)
-    } else {
-      newBNGDir <- oldBNGDir
-    }
+  newBNGDir <- oldBNGDir
+  if (oldBNGDir == "") {
+    installBNG <- getYesNo("Do you wish to set the existing BioNetGen install directory? (Y/n): ", default = TRUE)
+  } else {
+    installBNG <- getYesNo(paste0("Do you wish to change the existing BioNetGen install directory? Currently set to ", oldBNGDir, " (y/N): "), default = FALSE)
+  }
+  while (installBNG) {
+    newBNGDir <- readline("Set existing BioNetGen install directory: ")
+    newBNGDir <- normalizePath(newBNGDir)
 
     if (file.exists(paste0(newBNGDir, "/BNG2.pl"))) {
       break
+    } else {
+      cat(paste0("Could not detect BioNetGen within directory ", newBNGDir, ". Please try again."))
     }
-    cat(paste0("Could not detect BioNetGen within directory ", newBNGDir, ". Please try again."))
+  }
+
+  if (newBNGDir == "") {
+    cat("No BioNetGen install directory provided. Scripts depending on BioNetGen/NFsim will not work, run setup again to properly set this directory.\n")
   }
 
   newDefaults <- data.frame(setting = c("rxnconDir", "BNGDir", "installDir", "installed"),
@@ -144,14 +155,18 @@ sensibleDefaults <- function() {
     res[nrow(res) + 1,] <- c("rxnconDir", rxnconScripts)
   }
 
-  # Try and find BioNetGen somwhere in the home directory
-  homeFiles <- list.dirs.depth.n(Home(), 2)
-  bngDir <- homeFiles[grepl("BioNetGen", homeFiles)]
-  bngDir <- bngDir[which.min(sapply(bngDir, length))]
+  # # Try and find BioNetGen somwhere in the home directory
+  # homeFiles <- list.dirs.depth.n(Home(), 2)
+  # bngDir <- homeFiles[grepl("BioNetGen", homeFiles)]
+  # bngDir <- bngDir[which.min(sapply(bngDir, length))]
+  #
+  # if (dir.exists(bngDir)) {
+  #   res[nrow(res) + 1,] <- c("BNGDir", bngDir)
+  # }
 
-  if (dir.exists(bngDir)) {
-    res[nrow(res) + 1,] <- c("BNGDir", bngDir)
-  }
+  # Set BNGdir as empty for now
+  res[nrow(res) + 1,] <- c("BNGDir", "")
+
 
   # Set arbitrary dir as install directory
   res[nrow(res) + 1,] <- c("installDir", suppressWarnings(normalizePath(paste0(Home(), "/kboolnet_scripts"))))
