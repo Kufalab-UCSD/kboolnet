@@ -1,5 +1,5 @@
 # Loads in a config file based on an opt list and returns the opt list
-loadConfig <- function(opt, configPath) {
+loadConfig <- function(opt) {
   source(opt$config)
 
   if (!exists("config")) {
@@ -23,3 +23,4 @@ setDefaults <- function(opt, defaults) {
   opt     <- c(opt, default)
   return(opt)
 }
+
