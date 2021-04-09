@@ -62,7 +62,7 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt, config)
+  opt <- loadConfig(opt)
 }
 
 # Set default args if they are not already set
@@ -76,7 +76,6 @@ if (!dir.exists(opt$out)) {
 
 # Normalize paths
 outPath       <- paste0(normalizePath(opt$out), "/")
-BNGPath       <- paste0(normalizePath(opt$BNGPath), "/")
 
 # Parse modules option to a list
 modules <- trimws(strsplit(opt$modules, ",")[[1]])
@@ -122,7 +121,7 @@ if (!(is.na(opt$driveFile))) {
   masterFile  <- paste0(outPath, "master.xlsx")
   driveDownload(driveFile = opt$driveFile, out = masterFile, type = "spreadsheet")
 
-# If local file provided
+  # If local file provided
 } else {
   masterFile <- normalizePath(opt$file)
 
@@ -137,7 +136,7 @@ if (!(is.na(opt$driveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules...", "\n")
-callExtractModules(masterFile, modulesFile, modules, mminQuality)
+callExtractModules(masterFile, modulesFile, modules, minQuality)
 
 # Pass files to rxncon for processing
 cat("Creating bngl files... ")
@@ -215,8 +214,8 @@ bngl[length(bngl)] <- "writeXML();"
 
 # Write the new bngl to file and generate the XML
 writeLines(bngl, paste0(netFilePrefix, ".bngl"))
-suppressWarnings(stderr <- system2(paste0(BNGPath, "BNG2.pl"), args = c(paste0(netFilePrefix, ".bngl"),
-                                                                        "--outdir", outPath), stderr = TRUE, stdout = ""))
+callBNG(paste0(netFilePrefix, ".bngl"), outPath)
+
 # Generate the rnf file and run the simulation
 rnf <- c(paste0("-xml ", netFilePrefix, ".xml"),
          paste0("-o ", netFilePrefix, ".gdat"),
@@ -234,7 +233,7 @@ rnf <- c(paste0("-xml ", netFilePrefix, ".xml"),
 writeLines(rnf, paste0(netFilePrefix, ".rnf"))
 cat("Done.", "\n")
 cat("Simulating the model for ", simTime, " seconds...")
-stderr <- system2(paste0(BNGPath, "bin/NFsim"), args = c("-rnf", paste0(netFilePrefix, ".rnf")))
+callNFSim(paste0(netFilePrefix, ".rnf"))
 
 ################# Read and plot results ###################
 # We need to remove the # at the beginning of the gdat file to read it in properly
@@ -248,8 +247,8 @@ data <- read.table(tmp, header = TRUE)
 # Now we can plot
 data_pivot <- pivot_longer(data, -time)
 p <- ggplot(data_pivot, aes(x=time, y=value, color=name)) + geom_line() +
-            geom_vline(xintercept = simTime/4) + geom_vline(xintercept = simTime * (3/4)) +
-            labs(color="Observable")
+  geom_vline(xintercept = simTime/4) + geom_vline(xintercept = simTime * (3/4)) +
+  labs(color="Observable")
 ggsave(paste0(outPath, "results.pdf"), width = 7, height = 5, p)
 
 # Write to file as well

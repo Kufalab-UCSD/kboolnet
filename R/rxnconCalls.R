@@ -6,6 +6,15 @@ cleanFiles <- function(files) {
   }
 }
 
+loadPackageConfig <- function() {
+  configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
+  if (!file.exists(configFile)) {
+    stop("Package config file could not be found. Please run setupKboolnet() in an interactive terminal first!")
+  }
+
+  return(read.csv(file = configFile))
+}
+
 callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
@@ -51,5 +60,28 @@ callRxncon2Boolnet <- function(inFile, outFile, args=c()) {
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
+  }
+}
+
+callNFSim <- function(inFile, args=c()) {
+  config <- loadPackageConfig()
+  path <- paste0(config$value[config$setting == "BNGDir"], "/bin/NFsim")
+  suppressWarnings(stderr <- system2(path, args = c("-rnf", inFile)))
+
+  if (any(grepl("Error", stderr, ignore.case = TRUE))) {
+    cat(paste(stderr, "\n"))
+    stop("Error during NF file generation. Please run NFsim.")
+  }
+}
+
+callBNG <- function(inFile, outFile, args=c()) {
+  config <- loadPackageConfig()
+  path <- paste0(config$value[config$setting == "BNGDir"], "/BNG2.pl")
+  print(path)
+  suppressWarnings(stderr <- system2(path, args = c(inFile, "--outdir", outPath), stderr = TRUE, stdout = ""))
+
+  if (any(grepl("Error", stderr, ignore.case = TRUE))) {
+    cat(paste(stderr, "\n"))
+    stop("Error during BNG simulation Please run BNG2.pl.")
   }
 }
