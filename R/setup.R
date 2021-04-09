@@ -53,6 +53,7 @@ setupKboolnet <- function() {
   }
 
   # If installation necessary, prompt for new dir and do the installation
+  newInstallDir <- oldInstallDir
   if (!installed | reinstall) {
     while (TRUE) {
       newInstallDir <- readline(paste0("Set directory in which to install kboolnet scripts to (", oldInstallDir, "): "))
