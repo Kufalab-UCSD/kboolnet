@@ -21,7 +21,7 @@ setupKboolnet <- function() {
   }
 
   checkRxnconInstallScript <- paste0(system.file(package="kboolnet"), "/python/check_rxncon_install.py")
-  if (system2("python3", args = c(checkRxnconInstallScript)) != 0) {
+  if (system2("python3", args = c(addQuotes(checkRxnconInstallScript))) != 0) {
     stop("Could not load rxncon module. Please install with pip before continuing!")
   }
 
