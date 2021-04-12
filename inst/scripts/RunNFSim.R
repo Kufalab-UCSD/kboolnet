@@ -191,9 +191,10 @@ mapping <- read.csv(rxnMapFile)
 
 for (i in 1:nrow(mapping)) {
   rxn_idx <- intersect(which(grepl(mapping$rxnconName[i], bngl, fixed=TRUE)), reaction_param_idxs)
-  if (length(rxn_idx) > 1) {
-    stop(paste0("Reaction ", mapping$rxnconName[i], " is non-unique!"))
-  } else if (length(rxn_idx) == 0) {
+  # if (length(rxn_idx) > 1) {
+  #   stop(paste0("Reaction ", mapping$rxnconName[i], " is non-unique!"))
+  # }
+  if (length(rxn_idx) == 0) {
     stop(paste0("Reaction ", mapping$rxnconName[i], " is not present in bngl file."))
   }
   bngl[rxn_idx] <- gsub("\\s([0-9]+|[0-9]+\\.|\\.[0-9]+|[0-9]+\\.[0-9]+|\\.[0-9]+)\\s", mapping$rate[i], bngl[rxn_idx])
