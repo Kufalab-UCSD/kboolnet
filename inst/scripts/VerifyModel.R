@@ -20,7 +20,7 @@ suppressMessages(library(tidyr))
 suppressMessages(library(numbers))
 library(kboolnet)
 
-################ Function definitions #################
+  ################ Function definitions #################
 
 plotCompMat <- function(mat) {
   # Plot comparison matrices (w/ ligand)
@@ -33,7 +33,7 @@ plotCompMat <- function(mat) {
   df <- transform(df, x = as.numeric(x))
   p <- ggplot(df, aes(x, y)) + geom_tile(aes(fill = value), color = "lightgrey") +
     scale_x_continuous(position = "top", expand = c(0,0), breaks=1:rows) + scale_y_reverse(expand=c(0,0), breaks=rows:1) +
-    scale_fill_gradient2(limits=c(0,1), low = "red", mid="white", high="steelblue", midpoint = 0.5) +
+    scale_fill_gradient2(limits=c(min(df$value)-0.0001,1), low = "red", mid="white", high="steelblue", midpoint=(1 + min(df$value) - 0.0001)/2) +
     theme_classic() + theme(axis.line = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
                             axis.text = element_text(size = 10), panel.grid.minor = element_line(color = "lightgrey")) + coord_equal()
   return(p)
