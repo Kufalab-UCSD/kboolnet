@@ -66,76 +66,9 @@ mat1 <- mat1[,2:ncol(mat1), drop=F]
 rownames(mat2) <- mat2[,1]
 mat2 <- mat2[,2:ncol(mat2), drop=F]
 
-if (any(rownames(mat1) != rownames(mat2))) {
-  stop("Path matrices must be in same order and have same number of rows.")
-}
-numRows <- nrow(mat1)
-
-mats <- list(as.matrix(mat1, nrow=nrow(mat1), ncol=ncol(mat1)), as.matrix(mat2, nrow=nrow(mat2), ncol=ncol(mat2)))
-
-# Figure out which matrix is long and which one is short
-longMat <- which.max(lapply(mats, length))
-if (longMat == 1) shortMat = 2
-if (longMat == 2) shortMat = 1
-
-# Align and score the matrices
-scores <- numeric()
-shifts <- integer()
-orders <- list()
-orders[1] <- list(1:ncol(mat1))
-for (i in 1:ncol(mats[[longMat]])) {
-  # Create new ordering
-  if (i != 1) {
-    orders[[i]] <- c((ncol(mats[[longMat]]) - (i - 2)):ncol(mats[[longMat]]), 1:(ncol(mats[[longMat]]) - (i - 1)))
-  }
-
-  # Apply new ordering to long matrix and convert to vector
-  longVec <- as.vector(mats[[longMat]][,orders[[i]]])
-
-  # Calculate scores for all horizontal shifts for short matrix
-  shiftScores <- numeric()
-  for (j in 0:(ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) {
-    tmp <- mats[[shortMat]]
-    # Add columns to the left of short matrix if necessary
-    if (j > 0) {
-      tmp <- cbind(matrix(nrow=numRows, ncol=j), tmp)
-    }
-    # Add columns to the right of short matrix if necessary
-    if (j < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) {
-      tmp <- cbind(tmp, matrix(nrow=numRows, ncol=((ncol(mats[[longMat]]) - ncol(mats[[shortMat]])) - j)))
-    }
-
-    # Calculate score
-    shortVec <- as.vector(tmp)
-    shiftScores[j+1] <- sum(longVec == shortVec, na.rm=TRUE) / length(longVec)
-  }
-
-  # Find highest scoring horizontal "shift" for short matrix and keep that score
-  shifts[i] <- which.max(shiftScores) - 1
-  scores[i] <- max(shiftScores)
-
-  # If perfect score, we can stop there
-  if (scores[i] == 1) break
-
-  # If this is a path, only do this with original ordering
-  if (opt$path) break
-}
-
-# Apply highest-scoring order to long matrix
-bestOrder <- orders[[which.max(scores)]]
-mats[[longMat]] <- mats[[longMat]][,bestOrder, drop=F]
-
-# Apply highest-scoring shift to short matrix
-bestShift <- shifts[which.max(scores)]
-tmp <- mats[[shortMat]]
-if (bestShift > 0) { # Add to right
-  tmp <- cbind(matrix(nrow=numRows, ncol=bestShift), tmp)
-}
-if (bestShift < (ncol(mats[[longMat]]) - ncol(mats[[shortMat]]))) { # Add to left
-  tmp <- cbind(tmp, matrix(nrow=numRows, ncol=((ncol(mats[[longMat]]) - ncol(mats[[shortMat]])) - bestShift)))
-}
-tmp[is.na(tmp)] <- 0
-mats[[shortMat]] <- tmp
+mats <- alignMats(mat1, mat2)
+mats[[1]][is.na(mats[[1]])] <- 0
+mats[[2]][is.na(mats[[1]])] <- 0
 
 # Order rows according to nodes argument
 if (length(nodes) != 0) {
