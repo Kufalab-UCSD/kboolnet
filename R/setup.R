@@ -30,7 +30,7 @@ setupKboolnet <- function() {
     newPythonCommand <- oldPythonCommand
   }
 
-  cat("Checking if python3, pip, and rxnxon are installed...\n")
+  cat("Checking if python3, pip, and rxncon are installed...\n")
   if (system2(newPythonCommand, args = "--version", stdout = FALSE) != 0) {
     stop("Could not run python3. Please install before continuing!")
   }
