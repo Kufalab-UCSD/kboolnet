@@ -13,6 +13,12 @@ addQuotes <- function(str) {
   return(paste0("\"", noQuotes, "\""))
 }
 
+callPython <- function(args) {
+  config <- loadPackageConfig()
+  pythonCommand <- config$value[config$setting == "pythonCommand"]
+  return(suppressWarnings(system2(command = pythonCommand, args = args, stderr = TRUE, stdout = "")))
+}
+
 loadPackageConfig <- function() {
   configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
   if (!file.exists(configFile)) {
@@ -25,10 +31,8 @@ loadPackageConfig <- function() {
 callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(path, "--file", addQuotes(inFile),
-                                                                   "--modules", paste0('"', paste0(modules, collapse=","), '"'),
-                                                                   "--output", addQuotes(outFile), "--quality", quality, args),
-                                     stderr = TRUE, stdout = ""))
+  stderr <- callPython(c(path, "--file", addQuotes(inFile), "--modules", paste0('"', paste0(modules, collapse=","), '"'),
+                         "--output", addQuotes(outFile), "--quality", quality, args))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
     cat(paste(stderr, "\n"))
@@ -39,8 +43,7 @@ callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c())
 callRxncon2Reg <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-  suppressWarnings(stderr <- system2(command = "python3", args = c(path, addQuotes(inFile),
-                                                                   "--output", addQuotes(outFile), args), stderr = TRUE, stdout = ""))
+  stderr <-  callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile), args))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
     cat(paste(stderr, "\n"))
@@ -51,8 +54,8 @@ callRxncon2Reg <- function(inFile, outFile, args=c()) {
 callRxncon2BNG <- function(inFile, outFile, args=c()) {
   cleanFiles(addQuotes(paste0(outFile, c(".bngl", ".xml", ".rnf"))))
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2bngl.py")
-  suppressWarnings(stderr <- system2("python3", args = c(path, addQuotes(inFile), "--output",
-                                                         addQuotes(outFile)), stderr = TRUE, stdout = ""))
+  stderr <- callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile)))
+
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during BNG file generation. Please run rxncon2bngl.py on its own with the -v DEBUG flag.")
@@ -62,8 +65,8 @@ callRxncon2BNG <- function(inFile, outFile, args=c()) {
 callRxncon2Boolnet <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
-  suppressWarnings(stderr <- system2("python3", args = c(path, addQuotes(inFile), "--output",
-                                                       addQuotes(outFile), args), stderr = TRUE, stdout = ""))
+  stderr <- callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile), args))
+
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during BoolNet file generation. Please run rxncon2boolnet.py on its own with the -v DEBUG flag.")
@@ -105,8 +108,8 @@ callBNG <- function(inFile, outFile, args=c()) {
 callReactionMapping <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/reaction_mapping.py")
-  suppressWarnings(stderr <- system2("python3", args = c(path, addQuotes(inFile), "--output",
-                                                       addQuotes(outFile), args), stderr = TRUE, stdout = ""))
+  stderr <- callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile), args))
+
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during reaction mapping generation. Please run reaction_mapping.py on its own with the -v DEBUG flag.")
