@@ -342,16 +342,16 @@ dir.create(paste0(outPath, "nolig/attractor/"))
 dir.create(paste0(outPath, "nolig/path/"))
 
 # Write comparison data
-write.csv(scoreLig, file = paste0(outPath, "lig/simulation_comparison.csv"))
-write.csv(scoreNoLig, file = paste0(outPath, "nolig/simulation_comparison.csv"))
+write.csv(scoreLig, file = paste0(outPath, "lig/comparison_scores.csv"))
+write.csv(scoreNoLig, file = paste0(outPath, "nolig/comparison_scores.csv"))
 
 # Plot the attractor comparison matrices
 scoreLigPlot   <- plotCompMat(scoreLig)
 scoreNoLigPlot <- plotCompMat(scoreNoLig)
 width <- 1 + 0.75 * ncol(scoreLig)
 height <- 1 + 0.75 * nrow(scoreLig)
-suppressMessages(ggsave(paste0(outPath, "lig/simulation_comparison.pdf"), device="pdf", plot=scoreLigPlot, width=width, height=height))
-suppressMessages(ggsave(paste0(outPath, "nolig/simulation_comparison.pdf"), device="pdf", plot=scoreNoLigPlot, width=width, height=height))
+suppressMessages(ggsave(paste0(outPath, "lig/comparison_scores.pdf"), device="pdf", plot=scoreLigPlot, width=width, height=height))
+suppressMessages(ggsave(paste0(outPath, "nolig/comparison_scores.pdf"), device="pdf", plot=scoreNoLigPlot, width=width, height=height))
 
 # Create ordering for plots based on first simulation results
 orderSimPath <- cbind(ligAttr[[1]], 1:nrow(ligAttr[[1]]))
@@ -400,5 +400,11 @@ for (i in 1:rounds) {
   write.csv(noLigPath[[i]], file = paste0(outPath, "nolig/path/" , i, ".csv"))
   write.csv(noLigAttr[[i]], file = paste0(outPath, "nolig/attractor/" , i, ".csv"))
 }
+
+grDiffLig <- which(scoreNoLig == min(scoreLig, na.rm = TRUE), arr.ind = TRUE)[1,]
+comparePaths(as.matrix(ligAttr[[grDiffLig[1]]]), as.matrix(ligAttr[[grDiffLig[2]]]), output = paste0(outPath, "lig/comparison"))
+grDiffNoLig <- which(scoreNoLig == min(scoreNoLig, na.rm = TRUE), arr.ind = TRUE)[1,]
+comparePaths(as.matrix(noLigAttr[[grDiffNoLig[1]]]), as.matrix(noLigAttr[[grDiffNoLig[2]]]), output = paste0(outPath, "nolig/comparison"))
+
 
 cat("Done.", "\n")
