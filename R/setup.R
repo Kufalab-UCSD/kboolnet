@@ -11,32 +11,44 @@ getYesNo <- function(prompt, default = TRUE) {
   }
 }
 
+
 setupKboolnet <- function() {
-  if (system2("python3", args = "--version", stdout = FALSE) != 0) {
+  # Load in config file if it exists
+  configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
+  if (file.exists(configFile)) {
+    config <- read.csv(file = configFile)
+    oldPythonCommand <- config$value[config$setting == "pythonCommand"]
+  } else {
+    config <- NA
+    oldPythonCommand <- "python3"
+  }
+
+  newPythonCommand <- readline(paste0("Set python 3 command name (", oldPythonCommand, "): "))
+  if (trimws(newPythonCommand) != "") {
+    newPythonCommand <- normalizePath(newPythonCommand, mustWork = FALSE)
+  } else {
+    newPythonCommand <- oldPythonCommand
+  }
+
+  cat("Checking if python3, pip, and rxnxon are installed...\n")
+  if (system2(newPythonCommand, args = "--version", stdout = FALSE) != 0) {
     stop("Could not run python3. Please install before continuing!")
   }
 
-  if (system2("pip", stdout = FALSE) != 0) {
+  if (system2(newPythonCommand, args = c("-m", "pip"), stdout = FALSE) != 0) {
     stop("Could not run pip. Please install before continuing!")
   }
 
   checkRxnconInstallScript <- paste0(system.file(package="kboolnet"), "/python/check_rxncon_install.py")
-  if (system2("python3", args = c(addQuotes(checkRxnconInstallScript))) != 0) {
+  if (system2(newPythonCommand, args = c(addQuotes(checkRxnconInstallScript))) != 0) {
     stop("Could not load rxncon module. Please install with pip before continuing!")
   }
 
-  cat("Detecting sensible default values...\n")
-  defaults <- data.frame(setting = c("rxnconDir", "BNGDir", "installDir", "installed"), value = character(4))
-  configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
-  if (file.exists(configFile)) {
-    config <- read.csv(file = configFile)
-    for (i in 1:nrow(config)) {
-      if (config$value[i] != "") {
-        defaults$value[defaults$setting == config$setting[i]] <- config$value[i]
-      }
-    }
+  if (!any(is.na(config))) {
+    defaults <- config
   } else {
-    defaults <- sensibleDefaults()
+    cat("Detecting sensible default values...\n")
+    defaults <- sensibleDefaults(newPythonCommand)
   }
 
   oldRxnconDir <- defaults$value[defaults$setting == "rxnconDir"]
@@ -124,8 +136,8 @@ setupKboolnet <- function() {
     cat("No BioNetGen install directory provided. Scripts depending on BioNetGen/NFsim will not work, run setup again to properly set this directory.\n")
   }
 
-  newDefaults <- data.frame(setting = c("rxnconDir", "BNGDir", "installDir", "installed"),
-                            value = c(newRxnconDir, newBNGDir, newInstallDir, TRUE))
+  newDefaults <- data.frame(setting = c("rxnconDir", "BNGDir", "installDir", "installed", "pythonCommand"),
+                            value = c(newRxnconDir, newBNGDir, newInstallDir, TRUE, newPythonCommand))
   write.csv(newDefaults, file = configFile, row.names = FALSE)
   cat("Configuration successfully set.\n")
 
@@ -141,11 +153,11 @@ list.dirs.depth.n <- function(p, n) {
   }
 }
 
-sensibleDefaults <- function() {
+sensibleDefaults <- function(pythonCommand) {
   res <- data.frame(setting = character(), value = character())
 
   # Detect rxncon script install dir
-  pipOutput <- system2("pip", args = c("show", "rxncon", "-f"), stdout = TRUE)
+  pipOutput <- system2(pythonCommand, args = c("-m", "pip", "show", "rxncon", "-f"), stdout = TRUE)
   rxnconBase <- pipOutput[grepl("Location: ", pipOutput)]
   rxnconBase <- gsub("Location: ", "", rxnconBase)
   rxnconScriptsRel <- trimws(pipOutput[grepl("rxncon2regulatorygraph.py", pipOutput)])
@@ -167,7 +179,6 @@ sensibleDefaults <- function() {
 
   # Set BNGdir as empty for now
   res[nrow(res) + 1,] <- c("BNGDir", "")
-
 
   # Set arbitrary dir as install directory
   res[nrow(res) + 1,] <- c("installDir", suppressWarnings(normalizePath(paste0(Home(), "/kboolnet_scripts"))))
