@@ -50,8 +50,8 @@ alignMats <- function(mat1, mat2) {
     # If perfect score, we can stop there
     if (scores[i] == 1) break
 
-    # If this is a path, only do this with original ordering
-    if (opt$path) break
+    # # If this is a path, only do this with original ordering
+    # if (opt$path) break
   }
 
   # Apply highest-scoring order to long matrix
@@ -69,7 +69,7 @@ alignMats <- function(mat1, mat2) {
   }
   mats[[shortMat]] <- tmp
 
-  print(mats)
+  return(mats)
 }
 
 plotPathOverlap <- function(path1, path2, filePath = "", ratio = 0.8) {
@@ -110,4 +110,48 @@ plotPathOverlap <- function(path1, path2, filePath = "", ratio = 0.8) {
   }
 
   return(p)
+}
+
+comparePaths <- function(path1, path2, output = "./combined", nodes = c(), nodomains = FALSE) {
+  mats <- alignMats(path1, path2)
+  mats[[1]][is.na(mats[[1]])] <- 0
+  mats[[2]][is.na(mats[[1]])] <- 0
+
+  # Order rows according to nodes argument
+  if (length(nodes) != 0) {
+    missing <- nodes[!nodes %in% rownames(mats[[1]])]
+    if (length(missing) > 0) {
+      stop(paste0("Node(s) ", paste(missing, collapse = ", "), " not found in attractor. Make sure to reference full names, including domains."))
+    }
+    mats[[1]] <- mats[[1]][nodes,,drop=F]
+    mats[[2]] <- mats[[2]][nodes,,drop=F]
+  }
+
+  # Remove domain information if requested
+  if (nodomains) {
+    rownames(mats[[1]]) <- removeDomains(rownames(mats[[1]]))
+    rownames(mats[[2]]) <- removeDomains(rownames(mats[[2]]))
+  }
+
+  # Get rows with not matching values
+  diffRows <- rowSums(mats[[1]] - mats[[2]]) != 0
+
+  # Covert to data frame
+  pathRowNames <- rownames(mats[[1]])
+  mats[[1]] <- as.data.frame(mats[[1]])
+  mats[[2]] <- as.data.frame(mats[[2]])
+  rownames(mats[[1]]) <- pathRowNames
+  rownames(mats[[2]]) <- pathRowNames
+
+
+  ############### Plotting ################
+  # Plot entire path
+  plotPathOverlap(mats[[1]], mats[[2]], paste0(output, "_all.pdf"))
+
+  # Plot only different rows
+  if (sum(diffRows) == 0) {
+    cat("No difference between attractors for selected nodes! Skipping difference plot. \n")
+  } else {
+    plotPathOverlap(mats[[1]][diffRows,,drop=F], mats[[2]][diffRows,,drop=F], paste0(output, "_diff.pdf"))
+  }
 }
