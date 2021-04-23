@@ -34,7 +34,7 @@ driveDownload <- function(driveFile, out, type=NULL) {
     # Activate Google Drive authentication, required for searching in a user's drive
     drive_auth_config(active = TRUE)
 
-    gDriveID <- googledrive::as_id(googledrive::drive_find(pattern = opt$driveFile, type = type)$id[1])
+    gDriveID <- googledrive::as_id(googledrive::drive_find(pattern = driveFile, type = type)$id[1])
 
     if(is.na(gDriveID)) { # If file does not exist
       stop("File not found in Google Drive.")
