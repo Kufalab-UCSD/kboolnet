@@ -13,6 +13,8 @@ getYesNo <- function(prompt, default = TRUE) {
 
 
 setupKboolnet <- function() {
+  cat("Manual configuration entry. Leave response blank to keep default/previous settings, which are indicated in parentheses.\n")
+
   # Load in config file if it exists
   configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
   if (file.exists(configFile)) {
@@ -56,7 +58,6 @@ setupKboolnet <- function() {
   oldInstallDir <- defaults$value[defaults$setting == "installDir"]
   installed <- as.logical(defaults$value[defaults$setting == "installed"])
 
-  cat("Manual configuration entry. Leave response blank to keep default/previous settings.\n")
   # If already installed, ask if we want to reinstall
   reinstall <- FALSE
   if (installed) {
