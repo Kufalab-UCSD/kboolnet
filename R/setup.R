@@ -27,7 +27,10 @@ setupKboolnet <- function() {
 
   newPythonCommand <- readline(paste0("Set python 3 command name (", oldPythonCommand, "): "))
   if (trimws(newPythonCommand) != "") {
-    newPythonCommand <- normalizePath(newPythonCommand, mustWork = FALSE)
+    x <- normalizePath(newPythonCommand, mustWork = FALSE)
+    if (file.exists(x)) {
+      newPythonCommand <- x
+    }
   } else {
     newPythonCommand <- oldPythonCommand
   }
