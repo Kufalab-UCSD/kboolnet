@@ -47,7 +47,7 @@ opt <- opt[!is.na(opt)] # Discard NA values
 
 # Load config file if provided
 if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt, config)
+  opt <- loadConfig(opt)
 }
 
 # Set default args if they are not already set
