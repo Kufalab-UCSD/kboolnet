@@ -13,6 +13,8 @@ getYesNo <- function(prompt, default = TRUE) {
 
 
 setupKboolnet <- function() {
+  cat("Manual configuration entry. Leave response blank to keep default/previous settings, which are indicated in parentheses.\n")
+
   # Load in config file if it exists
   configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
   if (file.exists(configFile)) {
@@ -23,9 +25,12 @@ setupKboolnet <- function() {
     oldPythonCommand <- "python3"
   }
 
-  newPythonCommand <- readline(paste0("Set python 3 command name (", oldPythonCommand, "): "))
+  newPythonCommand <- readline(paste0("Enter python 3 command name (", oldPythonCommand, "): "))
   if (trimws(newPythonCommand) != "") {
-    newPythonCommand <- normalizePath(newPythonCommand, mustWork = FALSE)
+    x <- normalizePath(newPythonCommand, mustWork = FALSE)
+    if (file.exists(x)) {
+      newPythonCommand <- x
+    }
   } else {
     newPythonCommand <- oldPythonCommand
   }
@@ -56,7 +61,6 @@ setupKboolnet <- function() {
   oldInstallDir <- defaults$value[defaults$setting == "installDir"]
   installed <- as.logical(defaults$value[defaults$setting == "installed"])
 
-  cat("Manual configuration entry. Leave response blank to keep default/previous settings.\n")
   # If already installed, ask if we want to reinstall
   reinstall <- FALSE
   if (installed) {
@@ -68,7 +72,7 @@ setupKboolnet <- function() {
   newInstallDir <- oldInstallDir
   if (!installed | reinstall) {
     while (TRUE) {
-      newInstallDir <- readline(paste0("Set directory in which to install kboolnet scripts to (", oldInstallDir, "): "))
+      newInstallDir <- readline(paste0("Enter directory in which to install kboolnet scripts to (", oldInstallDir, "): "))
       if (trimws(newInstallDir) != "") {
         newInstallDir <- normalizePath(newInstallDir)
       } else {
@@ -101,7 +105,7 @@ setupKboolnet <- function() {
 
   # Prompt for rxncon install directory
   while (TRUE) {
-    newRxnconDir <- readline(paste0("Set existing rxncon2____.py script directory (", oldRxnconDir, "): "))
+    newRxnconDir <- readline(paste0("Enter existing rxncon2____.py script directory (", oldRxnconDir, "): "))
     if (trimws(newRxnconDir) != "") {
       newRxnconDir <- normalizePath(newRxnconDir)
     } else {
@@ -117,12 +121,12 @@ setupKboolnet <- function() {
   # Prompt for BNG install directory
   newBNGDir <- oldBNGDir
   if (oldBNGDir == "") {
-    installBNG <- getYesNo("Do you wish to set the existing BioNetGen install directory? (Y/n): ", default = TRUE)
+    installBNG <- getYesNo("Do you wish to enter the existing BioNetGen install directory? (Y/n): ", default = TRUE)
   } else {
     installBNG <- getYesNo(paste0("Do you wish to change the existing BioNetGen install directory? Currently set to ", oldBNGDir, " (y/N): "), default = FALSE)
   }
   while (installBNG) {
-    newBNGDir <- readline("Set existing BioNetGen install directory: ")
+    newBNGDir <- readline("Enter existing BioNetGen install directory: ")
     newBNGDir <- normalizePath(newBNGDir)
 
     if (file.exists(paste0(newBNGDir, "/BNG2.pl"))) {
