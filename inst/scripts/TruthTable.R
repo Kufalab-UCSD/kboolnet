@@ -21,12 +21,6 @@ suppressMessages(library(egg))
 library(kboolnet)
 
 ################ Function definitions #################
-escapeRegex <- function(regex) {
-  regex <- gsub('([.|()\\^{}+$?]|\\[|\\])', '\\\\\\1', regex)
-  regex <- gsub('\\*', '\\.\\*\\?', regex)
-  regex <- paste0("^", regex, "$")
-  return(regex)
-}
 
 ################# Argument parsing #################
 # Get commandline args
