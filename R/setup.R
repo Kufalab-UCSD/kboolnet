@@ -121,7 +121,7 @@ setupKboolnet <- function() {
   # Prompt for BNG install directory
   newBNGDir <- oldBNGDir
   if (oldBNGDir == "") {
-    installBNG <- getYesNo("Do you wish to enter the existing BioNetGen install directory? (Y/n): ", default = TRUE)
+    installBNG <- getYesNo("Do you wish to enter the existing BioNetGen install directory? (y/N): ", default = FALSE)
   } else {
     installBNG <- getYesNo(paste0("Do you wish to change the existing BioNetGen install directory? Currently set to ", oldBNGDir, " (y/N): "), default = FALSE)
   }
