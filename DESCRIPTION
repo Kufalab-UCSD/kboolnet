@@ -18,5 +18,6 @@ Imports:
     ggplot2,
     egg,
     openxlsx,
-    optparse
+    optparse,
+    igraph
 SystemRequirements: python3
