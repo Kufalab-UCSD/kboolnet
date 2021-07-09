@@ -16,10 +16,16 @@
 # Dependencies: ggplot2, dplyr, tidyr
 ############################################################
 
-plotPath <- function(path, filePath = "", ratio = 0.8) {
+plotPath <- function(path, filePath = "", ratio = 0.8, attractor_idxs = NA) {
   if(!is.data.frame(path)) {
     stop("Path must be a data frame")
   }
+
+  # If attractor indexes given, make them a different color
+  for (idx in attractor_idxs) {
+    path[path[,idx] == 1, idx] <- 2
+  }
+
 
   # Add columnvector with symbols and proper column names
   path          <- as.data.frame(path)
@@ -35,7 +41,7 @@ plotPath <- function(path, filePath = "", ratio = 0.8) {
   # Plot first simulation
   p         <- ggplot2::ggplot(pathGather, aes(t, symbols)) +
     ggplot2::geom_tile(aes(fill = value), colour = "white") +
-    ggplot2::scale_fill_gradient2(limits = c(0,2), low = "white", mid = "steelblue", high = "red", midpoint = 1)
+    ggplot2::scale_fill_gradient2(limits = c(0,2), low = "white", mid = "steelblue", high = "purple", midpoint = 1)
   base_size <- 8
   p         <- p + ggplot2::theme_grey(base_size = base_size) + ggplot2::labs(x = "", y = "") +
     ggplot2::scale_x_discrete(expand = c(0, 0)) + ggplot2::scale_y_discrete(expand = c(0, 0)) +
@@ -49,3 +55,4 @@ plotPath <- function(path, filePath = "", ratio = 0.8) {
 
   return(p)
 }
+
