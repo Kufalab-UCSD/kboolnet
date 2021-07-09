@@ -153,6 +153,8 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
     ### STEP 2 (New method): Map modifiers to rxncon states
     required_components = []
     for con in con_filtered:
+        con['modifier'] = re.sub('#.*', '', con['modifier'])
+
         if re.match(BOOLEAN_CONTINGENCY_REGEX, con['modifier']): # If contingency modifier is a boolean state, skip it
             con['modifier_states'] = []
             continue
@@ -234,6 +236,12 @@ def extract_modules(excel_filename: str, output=None, modules=[], min_quality=0)
         # If node not in rxn_filtered, try and find the matching reaction and add it to rxn_filtered
         for num, rxn_name in enumerate(all_rxn_names):
             if required_rxn_name == rxn_name or required_rxn_name_no_domains == rxn_name:
+                logger.warning('Added required reaction {} to filtered reactions.'.format(rxn_name))
+                added_reactions.append({'name': rxn_name, 'row_num': num})
+
+        # If still not found, try stripping domains from both sides
+        for num, rxn_name in enumerate(all_rxn_names):
+            if required_rxn_name_no_domains == re.sub(r'_\[.*?\]', '', rxn_name):
                 logger.warning('Added required reaction {} to filtered reactions.'.format(rxn_name))
                 added_reactions.append({'name': rxn_name, 'row_num': num})
 
