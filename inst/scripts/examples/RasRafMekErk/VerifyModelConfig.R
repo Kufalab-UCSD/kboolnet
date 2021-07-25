@@ -1,6 +1,10 @@
 config <- list(
     file = "./RasRafMekErk_master.xlsx",
-    ligands = "EGF",
-    out = "./VerifyModel_out"
+    out = "./VerifyModel_out",
+    runs = list(
+      default = list(
+        toggle = "EGF"
+      )
+    )
 )
 

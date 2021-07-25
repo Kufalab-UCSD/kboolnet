@@ -18,83 +18,31 @@ suppressMessages(library(googledrive))
 suppressMessages(library(optparse))
 suppressMessages(library(tidyr))
 suppressMessages(library(numbers))
+suppressMessages(library(igraph))
 library(kboolnet)
 
-  ################ Function definitions #################
-
-plotCompMat <- function(mat) {
-  # Plot comparison matrices (w/ ligand)
-  df <- as.data.frame(mat)
-  colnames(df) <- 1:ncol(df)
-  rows <- nrow(df)
-  df <- cbind(1:rows, df)
-  colnames(df)[1] <- "y"
-  df <- gather(df, "x", "value", 2:(rows+1), na.rm = T) # Rearrange data for plotting
-  df <- transform(df, x = as.numeric(x))
-  p <- ggplot(df, aes(x, y)) + geom_tile(aes(fill = value), color = "lightgrey") +
-    scale_x_continuous(position = "top", expand = c(0,0), breaks=1:rows) + scale_y_reverse(expand=c(0,0), breaks=rows:1) +
-    scale_fill_gradient2(limits=c(min(df$value)-0.0001,1), low = "red", mid="white", high="steelblue", midpoint=(1 + min(df$value) - 0.0001)/2) +
-    theme_classic() + theme(axis.line = element_blank(), axis.ticks = element_blank(), axis.title = element_blank(),
-                            axis.text = element_text(size = 10), panel.grid.minor = element_line(color = "lightgrey")) + coord_equal()
-  return(p)
-}
-
-simulateWithLigands <- function(network, states, names, ligands) {
-  # Add ligands in fully neutral state
-  for (lig in 1:length(ligands)){
-    states[grepl(paste0(ligands[lig], "_.*--0$"), names)] <- 1
-    states[grepl(paste0(ligands[lig], "_.*-\\{0\\}$"), names)] <- 1
+############## Argument parsing ####################
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
   }
 
-  # Simulate and return
-  return(getPathAndAttractor(network, states, names))
+  source(normalizePath(args))
 }
 
-simulateWithoutLigands <- function(network, states, names, ligands) {
-  # Unbind ligands from complexes and remove any ligand
-  for (lig in 1:length(ligands)){
-    states <- unbindLigand(ligands[lig], names, states)
-    states[names %in% ligNodesNames] <- 0
-  }
-
-  # Simulate and return
-  return(getPathAndAttractor(network, states, names))
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
 }
-
-################# Argument parsing #################
-# Get commandline args
-option_list = list(
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option("--file", action="store", default=NA, type="character",
-              help="Path of master rxncon file (local)"),
-  make_option("--driveFile", action="store", default=NA, type="character",
-              help="File name or path of master rxncon file (on Google Drive)"),
-  make_option("--modules", action="store", default=NA, type="character",
-              help="Comma-separated modules to be loaded from master rxncon file [default: load all modules]"),
-  make_option("--minQuality", action="store", default=NA, type="integer",
-              help="Minimum quality for rule to be loaded [default: 0]"),
-  make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Folder to which output files will be written [default: ./out/]"),
-  make_option(c("--ligands", "-l"), action="store", default=NA, type="character",
-              help="Comma-separated rxncon name(s) of ligand component(s) to be toggled in verification simulation"),
-  make_option("--rounds", action="store", default=NA, type="integer",
-              help="Maximum number of ligand/no-ligand simulation pairs that should be run (default: 20)"),
-  make_option("--inhib", action="store", default=NA, type="character",
-              help="Comma-separated rxncon name(s) of node(s)/component(s) to be inhibited in verification simulation")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
-opt <- opt[!is.na(opt)] # Discard NA values
-
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
-}
+print(config)
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, rounds=20, inhib="")
-opt <- setDefaults(opt, default)
+opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {
@@ -102,40 +50,7 @@ if (!dir.exists(opt$out)) {
 }
 
 # Normalize paths
-outPath       <- paste0(normalizePath(opt$out), "/")
-
-# Parse modules option to a list
-modules <- trimws(strsplit(opt$modules, ",")[[1]])
-
-# Same for ligands option
-if (is.na(opt$ligands)) {
-  stop("Please provide ligand(s) to be toggled in simulation rounds")
-}
-ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
-
-# Same for inhibitors
-inhib <- trimws(strsplit(opt$inhib, ",")[[1]])
-
-# Escape inhibitor regexes
-inhib <- gsub('([.|()\\^{}+$?]|\\[|\\])', '\\\\\\1', inhib)
-inhib <- gsub('\\*', '\\.\\*\\?', inhib)
-
-# Make sure input file path was provided
-if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided
-  stop("Please provide a path to a local rxncon file with --file or a Google Drive file with --driveFile")
-} else if ((!is.na(opt$file)) & (!is.na(opt$driveFile))) { # If both files were provided
-  stop("Please provide only one path with EITHER --file or --driveFile")
-}
-
-minQuality <- opt$minQuality
-if (opt$minQuality < 0) {
-  stop("minQuality must be >= 0")
-}
-
-maxrounds <- opt$rounds
-if (opt$rounds < 2) {
-  stop("rounds must be >= 2")
-}
+outPath <- paste0(normalizePath(opt$out), "/")
 
 ################ Load and process rxncon file ###################
 
@@ -162,7 +77,7 @@ if (!(is.na(opt$driveFile))) {
 # Extract modules from master file, write to modules file
 modulesFile <- paste0(outPath, "modules.xlsx")
 cat("Extracting modules... ")
-callExtractModules(masterFile, modulesFile, modules, minQuality)
+callExtractModules(masterFile, modulesFile, opt$modules)
 cat("Done.\n")
 
 # Pass files to rxncon for processing
@@ -185,226 +100,285 @@ initStates <- read.csv(paste0(netFilePrefix, '_initial_vals.csv'), col.names=c("
 initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
 
-# Create a BoolNet network in which nodes have been inhibited
-if (length(inhib) > 0) {
-  network <- fixedNetwork(network, inhib, symbolMapping$name, symbolMapping$ID)
+############## Simulation time #####################
+results <- list()
+scores <- list()
+for (i in 1:length(opt$runs)) {
+  run <- opt$runs[[i]]
+  runNet <- network
+  run_res <- list(list())
+  scoreLig <- matrix(nrow = opt$rounds, ncol = opt$rounds)
+  scoreNoLig <- matrix(nrow = opt$rounds, ncol = opt$rounds)
+  scoreLig[1,1] <- 1
+  scoreNoLig[1,1] <- 1
+
+  # Load initial state if given
+  run_initStates <- initStates
+  if ("initial" %in% names(run)) {
+    # TODO: proper input checking
+    run_initStates <- read.csv(run$initial, col.names=c("ID","state","name"), header=F)
+    run_initStates$name <- gsub("# ", "", run_initStates$name) # Clean up names
+    run_initStates$name <- gsub(" ", "", run_initStates$name)
+  }
+
+  # Apply on/off nodes
+  if (length(run$on) > 0) {
+    runNet <- fixedNetwork(runNet, run$on, initStates$name, initStates$ID, 1, regex=TRUE)
+  }
+  if (length(run$off) > 0) {
+    runNet <- fixedNetwork(runNet, run$off, initStates$name, initStates$ID, 0, regex=TRUE)
+  }
+
+  # # Equilibrate first
+  # tmp <- simulateWithLigands(runNet, run_initStates, run$toggle)
+  # run_initStates$state <- tmp$attractor[,1]
+
+  # First round of simulation
+  run_res[[1]]$noLig <- simulateWithoutLigands(runNet, run_initStates, run$toggle)
+  run_initStates$state <- run_res[[1]]$noLig$attractor[,1]
+  run_res[[1]]$lig <- simulateWithLigands(runNet, run_initStates, run$toggle)
+  run_initStates$state <- run_res[[1]]$lig$attractor[,1]
+
+  # Following rounds of simulation
+  for (j in 2:opt$rounds) {
+    run_res[[j]] <- list()
+
+    ####### NO LIG ######
+    # Simulate using every possible initial state from the previous w/ ligand attractor
+    noLigRes <- list()
+    for (k in 1:ncol(run_res[[j - 1]]$lig$attractor)) {
+      run_initStates$state <- run_res[[j - 1]]$lig$attractor[,k]
+      noLigRes[[k]] <- simulateWithoutLigands(runNet, run_initStates, run$toggle)
+    }
+
+    # Compare these to each other
+    consistencyScores <- matrix(nrow = length(noLigRes), ncol = length(noLigRes))
+    for (k in 1:length(noLigRes)) {
+      for (z in k:length(noLigRes)) {
+        consistencyScores[k,z] <- 1 - attractorDistance(noLigRes[[k]]$attractor, noLigRes[[z]]$attractor)
+      }
+    }
+
+    # Check if identical. If not, dump results and error out
+    identicalResults <- identicalScores(consistencyScores)
+    if (length(identicalResults) > 1) {
+      # Save full results, merge them, and save that too
+      merged_results <- mergeResults(results)
+      saveMergedResults(merged_results, outPath)
+
+      # Make state space from the results
+      results[[names(opt$runs)[i]]] <- run_res[1:j-1]
+      stateSpaces <- makeStateSpaceFromResults(results)
+
+      # Add the inconsistent attractors to it
+      attractor_nodes <- c()
+      for (k in 1:length(noLigRes)) {
+        stateSpaces[[i]] <- igraph::union(stateSpaces[[i]], pathToGraph(cbind(noLigRes[[k]]$path, noLigRes[[k]]$attractor)))
+        attractor_nodes <- union(attractor_nodes, apply(noLigRes[[k]]$attractor, 2, paste0, collapse=""))
+
+        ligEnd <- paste0(run_res[[j - 1]]$lig$attractor[,k], collapse = "")
+        attractor_nodes <- union(attractor_nodes, ligEnd)
+        noLigStart <- paste0(noLigRes[[k]]$path[,1], collapse = "")
+        stateSpaces[[i]] <- stateSpaces[[i]] + edge(c(ligEnd, noLigStart), action = "ligand_removal")
+      }
+      V(stateSpaces[[i]])[is.na(V(stateSpaces[[i]])$type)]$type <- "trajectory"
+      V(stateSpaces[[i]])[attractor_nodes]$type <- "attractor"
+
+      # Save state spaces
+      for (i in 1:length(stateSpaces)) {
+        stateSpaces[[i]] <- simplify(stateSpaces[[i]], remove.multiple = FALSE)
+        write_graph(stateSpaces[[i]], file = paste0(outPath, "run_", names(stateSpaces)[i], "_state_space.graphml"), format = "graphml")
+      }
+
+      # Save initial states that led to inconsistent attractors, as well as full paths
+      for (k in 1:length(identicalResults)) {
+        idx <- identicalResults[[k]][1]
+        run_initStates$state <- noLigRes[[idx]]$path[,1]
+        write.csv(run_initStates, file = paste0(outPath, "inconsistent_initState_", k, ".csv"))
+      }
+
+      # Compare the first two of the inconsistent attractors
+      comparePaths(noLigRes[[identicalResults[[1]][1]]]$attractor, noLigRes[[identicalResults[[2]][1]]]$attractor,
+                   output = paste0(outPath, "inconsistent_attractor"))
+
+
+      save(results, file = paste0(outPath, "results.RData"))
+      stop("Inconsistent no-ligand attractors were found on round ", j, " of run ", names(opt$runs)[i],
+           ". Dumping results as well as the initial states which resulted in inconsistent attractors.")
+    }
+
+    # Save result
+    run_res[[j]]$noLig <- noLigRes[[1]]
+
+    ###### WITH LIG ######
+    # Simulate using every possible initial state from the previous no ligand attractor
+    ligRes <- list()
+    for (k in 1:ncol(run_res[[j]]$noLig$attractor)) {
+      run_initStates$state <- run_res[[j]]$noLig$attractor[,k]
+      ligRes[[k]] <- simulateWithLigands(runNet, run_initStates, run$toggle)
+    }
+
+    # Compare these to each other
+    consistencyScores <- matrix(nrow = length(noLigRes), ncol = length(noLigRes))
+    for (k in 1:length(noLigRes)) {
+      for (z in k:length(noLigRes)) {
+        consistencyScores[k,z] <- 1 - attractorDistance(noLigRes[[k]]$attractor, noLigRes[[z]]$attractor)
+      }
+    }
+
+    # Check if identical. If not, dump results and error out
+    identicalResults <- identicalScores(consistencyScores)
+    if (length(identicalResults) > 1) {
+      # Save full results, merge them, and save that too
+      merged_results <- mergeResults(results)
+      saveMergedResults(merged_results, outPath)
+
+      # Make state space from the results
+      results[[names(opt$runs)[i]]] <- run_res[1:j-1]
+      stateSpaces <- makeStateSpaceFromResults(results)
+
+      # Add the inconsistent attractors to it
+      attractor_nodes <- c()
+      for (k in 1:length(noLigRes)) {
+        stateSpaces[[i]] <- igraph::union(stateSpaces[[i]], pathToGraph(cbind(noLigRes[[k]]$path, noLigRes[[k]]$attractor)))
+        attractor_nodes <- union(attractor_nodes, apply(noLigRes[[k]]$attractor, 2, paste0, collapse=""))
+
+        ligEnd <- paste0(run_res[[j - 1]]$lig$attractor[,k], collapse = "")
+        attractor_nodes <- union(attractor_nodes, ligEnd)
+        noLigStart <- paste0(noLigRes[[k]]$path[,1], collapse = "")
+        stateSpaces[[i]] <- stateSpaces[[i]] + edge(c(ligEnd, noLigStart), action = "ligand_removal")
+      }
+      V(stateSpaces[[i]])[is.na(V(stateSpaces[[i]])$type)]$type <- "trajectory"
+      V(stateSpaces[[i]])[attractor_nodes]$type <- "attractor"
+
+      # Save state spaces
+      for (i in 1:length(stateSpaces)) {
+        stateSpaces[[i]] <- simplify(stateSpaces[[i]], remove.multiple = FALSE)
+        write_graph(stateSpaces[[i]], file = paste0(outPath, "run_", names(stateSpaces)[i], "_state_space.graphml"), format = "graphml")
+      }
+
+      # Save initial states that led to inconsistent attractors, as well as full paths
+      for (k in 1:length(identicalResults)) {
+        idx <- identicalResults[[k]][1]
+        run_initStates$state <- noLigRes[[idx]]$path[,1]
+        write.csv(run_initStates, file = paste0(outPath, "inconsistent_initState_", k, ".csv"))
+      }
+
+      # Compare the first two of the inconsistent attractors
+      comparePaths(noLigRes[[identicalResults[[1]][1]]]$attractor, noLigRes[[identicalResults[[2]][1]]]$attractor,
+                   output = paste0(outPath, "inconsistent_attractor"))
+
+
+      save(results, file = paste0(outPath, "results.RData"))
+      stop("Inconsistent with-ligand attractors were found on round ", j, " of run ", names(opt$runs)[i],
+           ". Dumping results as well as the initial states which resulted in inconsistent attractors.")
+    }
+
+    run_res[[j]]$lig <- ligRes[[1]]
+
+    # Calculate score
+    for (k in 1:j) {
+      scoreLig[k,j] <- 1 - attractorDistance(run_res[[k]]$lig$attractor, run_res[[j]]$lig$attractor)
+      scoreNoLig[k,j] <- 1 - attractorDistance(run_res[[k]]$noLig$attractor, run_res[[j]]$noLig$attractor)
+    }
+
+    if (j != 1 & any(scoreLig[1:(j-1), j] == 1) & any(scoreNoLig[1:(j-1), j] == 1)) {
+      cat("Meta-attractor found for run", names(opt$runs)[i], "! Stopping simulation.", "\n")
+
+      if (j > 2) {
+        warning("Meta-attractor found for run ", names(opt$runs)[i], " after more than 2 rounds. This indicates possible traps/irreversible modifications.")
+      }
+      break
+    } else if (j == opt$rounds) {
+      cat("Max number of simulation rounds reached! Stopping simulation run", names(opt$runs)[i], "\n")
+    }
+  }
+
+  results[[names(opt$runs)[i]]] <- run_res
+  scores[[names(opt$runs)[i]]] <- list(noLig = scoreNoLig, lig = scoreLig)
 }
 
-# Find the nodes that the ligands correspond to
-ligNodes <- character()
-ligNodesNames <- character()
-for (i in 1:length(ligands)) {
-  # Make sure the ligand exists in a neutral state
-  if (!(any(grepl(paste0("^", ligands[i], "(_.*--0|_.*-\\{0\\})$"), initStates$name)))) {
-    stop("No neutral state found for ligand ", ligands[i], ". Please verify that ", ligands[i], " is a valid component in the rxncon system.")
-  }
+################### Create state space representation ################
+stateSpaces <- makeStateSpaceFromResults(results)
 
-  # Make a regex matching unbound, and modified forms of ligand
-  ligRegex <- paste0("(", c(paste0(ligands[i], "_.*--0"), paste0("^", ligands[i], "$"),
-                            paste0(ligands[i], "_.*-\\{.*\\}")), ")", collapse="|")
-  ligMatch <- grepl(ligRegex, symbolMapping$name)
-  ligNodes <- c(ligNodes, symbolMapping$ID[ligMatch])
-  ligNodesNames <- c(ligNodesNames, symbolMapping$name[ligMatch])
-
-  cat("Ligand", ligands[i], "matched to node(s)", paste0(symbolMapping$name[ligMatch], collapse=", "), "\n")
+# Merge into a single global state space
+globalStateSpace <- graph.empty()
+for (g in stateSpaces) {
+  globalStateSpace <- igraph::union(globalStateSpace, g)
 }
 
-####################### Simulate #########################
-# Lists to store simulation results
-noLigAttr <- list()
-noLigPath <- list()
-ligAttr   <- list()
-ligPath   <- list()
-
-# Matrices to store comparison results
-scoreLig   <- matrix(nrow = maxrounds, ncol = maxrounds)
-scoreNoLig <- matrix(nrow = maxrounds, ncol = maxrounds)
-
-# Simulation rounds
-cat("Starting simulations...", "\n")
-rounds <- 1
-
-# First round to set things up
-cat("Simulation round 1 ... ")
-noLigResults <- simulateWithoutLigands(network, initStates$state, initStates$name, ligands)
-noLigAttr[[1]] <- noLigResults$attractor
-noLigPath[[1]] <- noLigResults$path
-ligResults <- simulateWithLigands(network, noLigAttr[[1]][,ncol(noLigAttr[[1]])], initStates$name, ligands)
-ligAttr[[1]] <- ligResults$attractor
-ligPath[[1]] <- ligResults$path
-scoreLig[1,1] <- 1
-scoreNoLig[1,1] <- 1
-cat("Done.", "\n")
-
-for (i in 2:maxrounds) {
-  rounds <- rounds + 1
-  cat("Simulation round", rounds, "... ")
-
-  roundLigAttr   <- list()
-  roundLigPath    <- list()
-  roundNoLigAttr <- list()
-  roundNoLigPath  <- list()
-
-  # Simulate without ligand using each state of previous w/ ligand attractor as an initial state
-  for (j in 1:ncol(ligAttr[[i-1]])) {
-    res <- simulateWithoutLigands(network, ligAttr[[i-1]][,j], initStates$name, ligands)
-    roundNoLigAttr[[j]] <- res$attractor
-    roundNoLigPath[[j]] <- res$path
-  }
-
-  # Compare no ligand attractors to each other
-  roundNoLigCompScores <- matrix(nrow = length(roundNoLigAttr), ncol = length(roundNoLigAttr))
-  for (j in 1:length(roundNoLigAttr)) {
-    for (k in j:length(roundNoLigAttr)) {
-      roundNoLigCompScores[j,k] <- 1 - attractorDistance(roundNoLigAttr[[j]], roundNoLigAttr[[k]])
+# Copy over edge attributes into the global state space
+E(globalStateSpace)$action <- NA
+for (attr in edge_attr_names(globalStateSpace)[grepl("action_", edge_attr_names(globalStateSpace))]) {
+  for (e in E(globalStateSpace)) {
+    edge <- E(globalStateSpace)[[e]]
+    new_attr <- get.edge.attribute(globalStateSpace, attr, edge)
+    if (!is.na(new_attr)) {
+      E(globalStateSpace)[[e]]$action <- new_attr
     }
-  }
-
-  if (any(roundNoLigCompScores != 1, na.rm=T)) { # If dissimilar attractors found
-    warning("No-ligand attractors in round ", rounds, " are not consistent, possibly indicating \"trap\" states! Using most dissimilar attractor to continue.")
-    # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
-    roundNoLigScores <- numeric(length(roundNoLigAttr))
-    for (j in 1:length(roundNoLigAttr)) {
-      roundNoLigScores[j] <- 1 - attractorDistance(roundNoLigAttr[[j]], noLigAttr[[i-1]])
-    }
-    noLigAttr[[i]] <- roundNoLigAttr[[which.min(roundNoLigScores)]]
-    noLigPath[[i]] <- roundNoLigPath[[which.min(roundNoLigScores)]]
-  } else { # Else just save the first one
-    noLigAttr[[i]] <- roundNoLigAttr[[1]]
-    noLigPath[[i]] <- roundNoLigPath[[1]]
-  }
-
-  # Simulate with ligand using each state of previous no ligand attractor as an initial state
-  for (j in 1:ncol(noLigAttr[[i]])) {
-    res <- simulateWithLigands(network, noLigAttr[[i]][,j], initStates$name, ligands)
-    roundLigAttr[[j]] <- res$attractor
-    roundLigPath[[j]] <- res$path
-  }
-
-  # Compare with ligand attractors to each other
-  roundLigCompScores <- matrix(nrow = length(roundLigAttr), ncol = length(roundLigAttr))
-  for (j in 1:length(roundLigAttr)) {
-    for (k in j:length(roundLigAttr)) {
-      roundLigCompScores[j,k] <- 1 - attractorDistance(roundLigAttr[[j]], roundLigAttr[[k]])
-    }
-  }
-
-  if (any(roundLigCompScores != 1, na.rm=T)) { # If dissimilar attractors found
-    warning("With-ligand attractors in round ", rounds, " are not consistent, possibly indicating \"trap\" states! Using most dissimilar attractor to continue.")
-    # Compare no ligand attractors for this round to previous round's no ligand attractor, save the most dissimilar attractor
-    roundLigScores <- numeric(length(roundLigAttr))
-    for (j in 1:length(roundLigAttr)) {
-      roundLigScores[j] <- 1 - attractorDistance(roundLigAttr[[i]], ligAttr[[i-1]])
-    }
-    ligAttr[[i]] <-roundLigAttr[[which.min(roundLigScores)]]
-    ligPath[[i]] <-roundLigPath[[which.min(roundLigScores)]]
-  } else { # Else just save the first one
-    ligAttr[[i]] <- roundLigAttr[[1]]
-    ligPath[[i]] <- roundLigPath[[1]]
-  }
-
-  cat("Done.", "\n")
-
-  # Compare this round of simulation to previous rounds
-  for (j in 1:rounds) {
-    scoreLig[j,rounds] <- 1 - attractorDistance(ligAttr[[rounds]], ligAttr[[j]])
-    scoreNoLig[j,rounds] <- 1 - attractorDistance(noLigAttr[[rounds]], noLigAttr[[j]])
-  }
-
-  # If both ligand and no-ligand simulations are identical to a previous round, then we know a
-  # "meta-attractor" has been found and we can stop simulation
-  if (rounds != 1 & any(scoreLig[1:rounds-1,rounds] == 1) & any(scoreNoLig[1:rounds-1,rounds] == 1)) {
-    cat("Meta-attractor found! Stopping simulation.", "\n")
-
-    if (rounds > 2) {
-      warning("Meta-attractor found after more than 2 rounds. This indicates possible traps/irreversible modifications.")
-    }
-    break
-  } else if (rounds == maxrounds) {
-    cat("Max number of simulation rounds reached! Stopping simulation.", "\n")
   }
 }
 
-# Remove extra rows/columnds from comparison matrices
-scoreLig   <- scoreLig[1:rounds,1:rounds]
-scoreNoLig <- scoreNoLig[1:rounds,1:rounds]
-
-##################### Plot and save data ##############################
-cat("Simulations complete after", rounds, "rounds.", "\n")
-# Create output subdirs
-unlink(paste0(outPath, "lig"), recursive = TRUE)
-unlink(paste0(outPath, "nolig"), recursive = TRUE)
-dir.create(paste0(outPath, "lig/"))
-dir.create(paste0(outPath, "lig/attractor/"))
-dir.create(paste0(outPath, "lig/path/"))
-dir.create(paste0(outPath, "nolig/"))
-dir.create(paste0(outPath, "nolig/attractor/"))
-dir.create(paste0(outPath, "nolig/path/"))
-
-# Write comparison data
-write.csv(scoreLig, file = paste0(outPath, "lig/comparison_scores.csv"))
-write.csv(scoreNoLig, file = paste0(outPath, "nolig/comparison_scores.csv"))
-
-# Plot the attractor comparison matrices
-scoreLigPlot   <- plotCompMat(scoreLig)
-scoreNoLigPlot <- plotCompMat(scoreNoLig)
-width <- 1 + 0.75 * ncol(scoreLig)
-height <- 1 + 0.75 * nrow(scoreLig)
-suppressMessages(ggsave(paste0(outPath, "lig/comparison_scores.pdf"), device="pdf", plot=scoreLigPlot, width=width, height=height))
-suppressMessages(ggsave(paste0(outPath, "nolig/comparison_scores.pdf"), device="pdf", plot=scoreNoLigPlot, width=width, height=height))
+########### Create output RData file ##############
+# Merge results into a single list, one entry per run
+merged_results <- mergeResults(results)
 
 # Create ordering for plots based on first simulation results
-orderSimPath <- cbind(ligAttr[[1]], 1:nrow(ligAttr[[1]]))
+orderSimPath <- cbind(merged_results[[1]], 1:nrow(merged_results[[1]]))
 for(i in (ncol(orderSimPath)-1):1){
   orderSimPath <- orderSimPath[order(orderSimPath[,i], decreasing = T), ]
 }
 
 # Move ligands to first position of order
-for (i in 1:length(ligNodesNames)) {
+ligands <- c()
+for (i in 1:length(config$runs)) {
+  ligands <- c(ligands, config$runs[[i]]$toggle)
+}
+ligands <- unique(ligands)
+for (i in 1:length(ligands)) {
   # Find row numbers of unbound forms of ligand
-  inds <- grep(ligNodesNames[i], rownames(orderSimPath), fixed=T)
-  origInds <- inds
+  inds <- grep(ligands[i], rownames(orderSimPath))
 
-  # Move each of those rows to the beginning of the order (unless they're already at the front)
-  for (j in 1:length(origInds)) {
-    if (origInds[j] > j) {
-      if (inds[j] == 1) { # If not at top
-        orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
-      } else if (inds[j] == nrow(orderSimPath)) { # If all the way at the bottom
-        orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1)),]
-      }
-      inds <- grep(ligNodesNames[i], rownames(orderSimPath), fixed=T)
-    }
-  }
+  orderSimPath <- rbind(orderSimPath[inds,], orderSimPath[-inds,])
+  # origInds <- inds
+  #
+  # # Move each of those rows to the beginning of the order (unless they're already at the front)
+  # for (j in length(origInds):1) {
+  #   if (origInds[j] > j) {
+  #     if (origIinds[j] != 1) { # If not at top
+  #       orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1), (inds[j]+1):nrow(orderSimPath)),]
+  #     } else if (inds[j] == nrow(orderSimPath)) { # If all the way at the bottom
+  #       orderSimPath <- orderSimPath[c(inds[j], 1:(inds[j]-1)),]
+  #     }
+  #     inds <- grep(ligands[i], rownames(orderSimPath))
+  #   }
+  # }
 }
 
 # Save order
 plotOrder <- orderSimPath[,ncol(orderSimPath)]
 
-for (i in 1:rounds) {
-  # Reorder the paths
-  ligPath[[i]] <- ligPath[[i]][plotOrder,,drop=F]
-  ligAttr[[i]] <- ligAttr[[i]][plotOrder,,drop=F]
-  noLigPath[[i]] <- noLigPath[[i]][plotOrder,,drop=F]
-  noLigAttr[[i]] <- noLigAttr[[i]][plotOrder,,drop=F]
-
-  # Plot ligand paths/attractors
-  plotPath(path = ligPath[[i]], filePath = paste0(outPath, "lig/path/" , i, ".pdf"))
-  plotPath(path = ligAttr[[i]], filePath = paste0(outPath, "lig/attractor/", i, ".pdf"))
-  write.csv(ligPath[[i]], file = paste0(outPath, "lig/path/" , i, ".csv"))
-  write.csv(ligAttr[[i]], file = paste0(outPath, "lig/attractor/" , i, ".csv"))
-
-  # Plot no ligand paths/attractors
-  plotPath(path = noLigPath[[i]], filePath = paste0(outPath, "nolig/path/" , i, ".pdf"))
-  plotPath(path = noLigAttr[[i]], filePath = paste0(outPath, "nolig/attractor/", i, ".pdf"))
-  write.csv(noLigPath[[i]], file = paste0(outPath, "nolig/path/" , i, ".csv"))
-  write.csv(noLigAttr[[i]], file = paste0(outPath, "nolig/attractor/" , i, ".csv"))
+# Apply order to all runs
+for (i in 1:length(merged_results)) {
+  merged_results[[i]] <- merged_results[[i]][plotOrder,]
 }
 
-grDiffLig <- which(scoreNoLig == min(scoreLig, na.rm = TRUE), arr.ind = TRUE)[1,]
-comparePaths(as.matrix(ligAttr[[grDiffLig[1]]]), as.matrix(ligAttr[[grDiffLig[2]]]), output = paste0(outPath, "lig/comparison"))
-grDiffNoLig <- which(scoreNoLig == min(scoreNoLig, na.rm = TRUE), arr.ind = TRUE)[1,]
-comparePaths(as.matrix(noLigAttr[[grDiffNoLig[1]]]), as.matrix(noLigAttr[[grDiffNoLig[2]]]), output = paste0(outPath, "nolig/comparison"))
+for (i in 1:length(results)) {
+  for (j in 1:length(results[[i]])) {
+    results[[i]][[j]]$noLig$path <- results[[i]][[j]]$noLig$path[plotOrder,]
+    results[[i]][[j]]$noLig$attractor <- results[[i]][[j]]$noLig$attractor[plotOrder,]
+    results[[i]][[j]]$lig$path <- results[[i]][[j]]$lig$path[plotOrder,]
+    results[[i]][[j]]$lig$attractor <- results[[i]][[j]]$lig$attractor[plotOrder,]
+  }
+}
 
+################# Write things to file ###############
+save(results, file = paste0(outPath, "results.RData"))
 
-cat("Done.", "\n")
+saveMergedResults(merged_results, outPath)
+
+for (i in 1:length(stateSpaces)) {
+  write_graph(stateSpaces[[i]], file = paste0(outPath, "run_", names(stateSpaces)[i], "_state_space.graphml"), format = "graphml")
+}
+write_graph(globalStateSpace, file = paste0(outPath, "global_state_space.graphml"), format = "graphml")
+

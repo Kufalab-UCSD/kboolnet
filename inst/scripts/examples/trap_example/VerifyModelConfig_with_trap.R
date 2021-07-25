@@ -1,6 +1,10 @@
 config <- list(
-    file = "./example_with_trap.xlsx",
-    ligands = "Ligand",
-    out = "./with_trap_out"
+  file = "./example_with_trap.xlsx",
+  out = "./with_trap_out",
+  runs = list(
+    default = list(
+      toggle = "Ligand"
+    )
+  )
 )
 

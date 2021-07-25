@@ -22,10 +22,11 @@ plotPath <- function(path, filePath = "", ratio = 0.8, attractor_idxs = NA) {
   }
 
   # If attractor indexes given, make them a different color
-  for (idx in attractor_idxs) {
-    path[path[,idx] == 1, idx] <- 2
+  if (!is.na(attractor_idxs)) {
+    for (idx in attractor_idxs) {
+      path[path[,idx] == 1, idx] <- 2
+    }
   }
-
 
   # Add columnvector with symbols and proper column names
   path          <- as.data.frame(path)

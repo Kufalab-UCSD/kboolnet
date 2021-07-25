@@ -120,36 +120,24 @@ plotDiffs <- function(diffs, file = NA) {
   return(diffPlot)
 }
 
-################# Argument parsing #################
-# Get commandline args
-option_list = list(
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option("--file", action="store", default=NA, type="character",
-              help="Path of master rxncon file (local)"),
-  make_option("--driveFile", action="store", default=NA, type="character",
-              help="File name or path of master rxncon file (on Google Drive)"),
-  make_option("--modules", action="store", default=NA, type="character",
-              help="Comma-separated modules to be loaded from master rxncon file [default: load all modules]"),
-  make_option("--minQuality", action="store", default=NA, type="integer",
-              help="Minimum quality for rule to be loaded [default: 0]"),
-  make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Folder to which output files will be written [default: ./out/]"),
-  make_option(c("--ligands", "-l"), action="store", default=NA, type="character",
-              help="Comma-separated rxncon name(s) of ligand component(s) to be toggled in simulation."),
-  make_option("--inhib", action="store", default=NA, type="character",
-              help="Comma-separated rxncon name(s) of node(s) to be inhibited in simulation"),
-  make_option("--outputs", action="store", default=NA, type="character",
-              help="Comma-separated rxncon name(s) of nodes to be considered as outputs when performing sensitivity analysis.")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
-opt <- opt[!is.na(opt)] # Discard NA values
+################## Argument loading/parsing ################
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
+  }
 
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
+  source(normalizePath(args))
 }
+
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
+}
+print(config)
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, outputs=NA, inhib="")

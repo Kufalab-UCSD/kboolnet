@@ -45,7 +45,8 @@ callRxncon2Reg <- function(inFile, outFile, args=c()) {
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
   stderr <-  callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile), args))
 
-  if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
+  # if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
+  if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during module plotting. Please run rxncon2regulatorygraph.py on its own with the -v DEBUG flag.")
   }

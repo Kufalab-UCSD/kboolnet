@@ -16,30 +16,24 @@ suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(optparse))
 library(kboolnet)
 
-############### Argument parsing and setup ###################
-# Get commandline args
-option_list = list(
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option(c("--file", "-f"), action="store", default=NA, type="character",
-              help="Name of csv file containing path/attractor to be plotted"),
-  make_option(c("--nodes", "-n"), action="store", default=NA, type="character",
-              help="Comma-separated list of nodes to be displayed in plot. [default: all nodes]"),
-  make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Name of PDF file to which plot should be written. [default: plot.pdf]"),
-  make_option(c("--ratio", "-r"), action="store", default=NA, type="numeric",
-              help="Width:height ratio of the tiles in the graph. [default: 0.8]"),
-  make_option(c("--nodomains", "-d"), action="store_true", default=NA, type="logical",
-              help="Remove domains from rxncon node names. [default: don't remove]")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
-opt <- opt[!is.na(opt)] # Discard NA values
+################## Argument loading/parsing ################
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
+  }
 
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
+  source(normalizePath(args))
 }
+
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
+}
+print(config)
 
 # Set default args if they are not already set
 default <- list(out="./plot.pdf", nodes="", nodomains=FALSE, ratio=0.8)

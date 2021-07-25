@@ -134,7 +134,7 @@ comparePaths <- function(path1, path2, output = "./combined", nodes = c(), nodom
   }
 
   # Get rows with not matching values
-  diffRows <- rowSums(mats[[1]] - mats[[2]]) != 0
+  diffRows <- rowSums(abs(mats[[1]] - mats[[2]])) != 0
 
   # Covert to data frame
   pathRowNames <- rownames(mats[[1]])

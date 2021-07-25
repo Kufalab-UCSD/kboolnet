@@ -15,30 +15,24 @@ library(tidyr)
 library(optparse)
 library(kboolnet)
 
-############# Argument parsing and handling ############
+################## Argument loading/parsing ################
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
+  }
 
-option_list = list(
-  make_option(c("--pathA", "-a"), action="store", default=NA, type="character",
-              help="First of the two paths to be compared."),
-  make_option(c("--pathB", "-b"), action="store", default=NA, type="character",
-              help="Second of the two paths to be compared."),
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option(c("-o", "--output"), action="store", default=NA,
-              help="Base name for output files. [default: ./combined]"),
-  make_option(c("-n", "--nodes"), action="store", default=NA,
-              help="Comma-separated ordered list of nodes to plot. [default: all]"),
-  make_option(c("--nodomains", "-d"), action="store_true", default=NA, type="logical",
-              help="Remove domains from rxncon node names. [default: don't remove]")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
-opt <- opt[!is.na(opt)] # Discard NA values
-
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
+  source(normalizePath(args))
 }
+
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
+}
+print(config)
 
 # Set default args if they are not already set
 default <- list(path=FALSE, output="./combined", nodomains=FALSE, nodes="")

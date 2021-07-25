@@ -20,38 +20,24 @@ suppressMessages(library(tidyr))
 suppressMessages(library(egg))
 library(kboolnet)
 
-################ Function definitions #################
+################## Argument loading/parsing ################
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
+  }
 
-################# Argument parsing #################
-# Get commandline args
-option_list = list(
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option("--file", action="store", default=NA, type="character",
-              help="Path of master rxncon file (local)"),
-  make_option("--driveFile", action="store", default=NA, type="character",
-              help="File name or path of master rxncon file (on Google Drive)"),
-  make_option("--modules", action="store", default=NA, type="character",
-              help="Comma-separated modules to be loaded from master rxncon file [default: load all modules]"),
-  make_option("--minQuality", action="store", default=NA, type="integer",
-              help="Minimum quality for rule to be loaded [default: 0]"),
-  make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Folder to which output files will be written [default: ./out/]"),
-  make_option("--inputStimuli", action="store", default=NA, type="character",
-              help="Comma-separated rxncon names of nodes that serve as stimulus inputs in simulation."),
-  make_option("--inputInhibs", action="store", default=NA, type="character",
-              help="Comma-separated rxncon names of nodes that serve as inhibitor inputs in simulation."),
-  make_option("--outputs", action="store", default=NA, type="character",
-              help="Comma-separated rxncon names of nodes that serve as outputs in simulation.")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
-opt <- opt[!is.na(opt)] # Discard NA values
-
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
+  source(normalizePath(args))
 }
+
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
+}
+print(config)
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, inputInhibs=NA, inputStimuli=NA, outputs=NA)

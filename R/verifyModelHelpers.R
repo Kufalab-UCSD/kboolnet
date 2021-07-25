@@ -64,3 +64,52 @@ mapLigToUnboundNodes <- function(ligands, initStates) {
 
   return(ligNodes)
 }
+
+# Merge results into a single list, one entry per run
+mergeResults <- function(results) {
+  merged_results <- list()
+  for (i in 1:length(results)) {
+    run_name <- names(results)[i]
+    merged_results[[run_name]] <- results[[run_name]][[1]]$noLig$path[,0]
+    for (j in 1:length(results[[run_name]])) {
+      x <- results[[run_name]][[j]]$noLig$path
+      colnames(x) <- rep(paste0(j, "_", "noLig_path"), ncol(x))
+      attr_idxs <- (ncol(x) + 1 - length(results[[run_name]][[j]]$noLig$attractor)):ncol(x)
+      colnames(x)[attr_idxs] <- paste0(j, "_", "noLig_attractor")
+      y <- results[[run_name]][[j]]$lig$path
+      colnames(y) <- rep(paste0(j, "_", "lig_path"), ncol(y))
+      colnames(y)[(ncol(y) + 1 - length(results[[run_name]][[j]]$lig$attractor)):ncol(y)] <- paste0(j, "_", "lig_attractor")
+      merged_results[[run_name]] <- cbind(merged_results[[run_name]], x, y)
+    }
+  }
+
+  return(merged_results)
+}
+
+identicalScores <- function(scores) {
+  res <- list()
+  visited <- numeric()
+  for (i in 1:nrow(scores)) {
+    identical <- numeric()
+    for (j in i:ncol(scores)) {
+      if (j %in% visited) {
+        next
+      } else if (scores[i, j] == 1) {
+        identical <- c(identical, j)
+        visited <- c(visited, j)
+      }
+    }
+    if (length(identical) > 0) {
+      res[[length(res) + 1]] <- identical
+    }
+  }
+  return(res)
+}
+
+saveMergedResults <- function(merged_results, outPath) {
+  for (i in 1:length(merged_results)) {
+    write.csv(merged_results[[i]], file = paste0(outPath, "run_", names(merged_results)[i], ".csv"))
+    attractor_idxs <- which(grepl("_attractor$", colnames(merged_results[[i]])))
+    plotPath(merged_results[[i]], filePath = paste0(outPath, "run_", names(merged_results)[i], ".pdf"), attractor_idxs = attractor_idxs)
+  }
+}

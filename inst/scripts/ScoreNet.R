@@ -21,46 +21,24 @@ suppressMessages(library(tidyr))
 suppressMessages(library(egg))
 library(kboolnet)
 
-################# Argument parsing #################
-# Get commandline args
-option_list = list(
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option("--rxnconFile", action="store", default=NA, type="character",
-              help="Path to master rxncon file (local)"),
-  make_option("--rxnconDriveFile", action="store", default=NA, type="character",
-              help="File name or path of master rxncon file (on Google Drive)"),
-  make_option("--MIDASFile", action="store", default=NA, type="character",
-              help="Path to MIDAS file (local)"),
-  make_option("--MIDASDriveFile", action="store", default=NA, type="character",
-              help="File name or path of MIDAS file (on Google Drive)"),
-  make_option(c("--modules", "-m"), action="store", default=NA, type="character",
-              help="Comma-separated modules to be loaded from master rxncon file [default: load all modules]"),
-  make_option("--minQuality", action="store", default=NA, type="integer",
-              help="Minimum quality for rule to be loaded [default: 0]"),
-  make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Folder to which output files will be written [default: ./out/]"),
-  make_option(c("--bin", "-b"), action="store", default=NA, type="integer",
-              help="Bin to use as final timepoint when scoring. 0 = All data after t = 0, 1 = (0, 3], 2 = (3, 30], 3 = (30, 300], 4 = (300, Inf) [default: 0]"),
-  make_option(c("--normalize", "-n"), action="store_true", default=NA, type="logical",
-              help="Normalize output of simulations such that the maximum value for a measurement across allsimulation is 1."),
-  make_option(c("--pretreat", "-p"), action="store_true", default=NA, type="logical",
-              help="Option to cause inhibitors to be applied BEFORE stimuli are applied"),
-  make_option(c("--celltype"), action="store", default=NA, type="character",
-              help="Comma-separated list of cell types to filter original data by"),
-  make_option(c("--height"), action="store", default=NA, type="character",
-              help="Height in inches of the plots"),
-  make_option(c("--width"), action="store", default=NA, type="character",
-              help="Width in inches of the plots")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
-opt <- opt[!is.na(opt)] # Discard NA values
+################## Argument loading/parsing ################
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
+  }
 
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
+  source(normalizePath(args))
 }
+
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
+}
+print(config)
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height= NA,
