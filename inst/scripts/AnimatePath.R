@@ -39,7 +39,7 @@ if ("config" %in% names(opt)) {
 
 # Set default args if they are not already set
 default <- list(file=NA, out="./animation.mp4", textsize=50, zoom=200)
-opt <- setDefaults(opt, default)
+opt <- setDefaults(config, default)
 
 # Stop if no file provided
 if (is.na(opt$file)) {

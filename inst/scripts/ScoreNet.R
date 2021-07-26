@@ -43,7 +43,7 @@ print(config)
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height= NA,
                 MIDASFile=NA, MIDASDriveFile=NA, bin=0, normalize=FALSE, pretreat=FALSE, celltype="all")
-opt <- setDefaults(opt, default)
+opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {

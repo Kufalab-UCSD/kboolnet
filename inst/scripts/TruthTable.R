@@ -41,7 +41,7 @@ print(config)
 
 # Set default args if they are not already set
 default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, inputInhibs=NA, inputStimuli=NA, outputs=NA)
-opt <- setDefaults(opt, default)
+opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
 if (!dir.exists(opt$out)) {

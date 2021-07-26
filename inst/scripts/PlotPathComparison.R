@@ -36,7 +36,7 @@ print(config)
 
 # Set default args if they are not already set
 default <- list(path=FALSE, output="./combined", nodomains=FALSE, nodes="")
-opt <- setDefaults(opt, default)
+opt <- setDefaults(config, default)
 
 # Stop if no file provided
 if (is.na(opt$pathA) | is.na(opt$pathB)) {
