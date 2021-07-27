@@ -35,7 +35,7 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(path=FALSE, output="./combined", nodomains=FALSE, nodes="")
+default <- list(path=FALSE, output="./combined", nodomains=FALSE, nodes=c())
 opt <- setDefaults(config, default)
 
 # Stop if no file provided
@@ -44,7 +44,7 @@ if (is.na(opt$pathA) | is.na(opt$pathB)) {
 }
 
 output <- opt$output
-nodes <- trimws(strsplit(opt$nodes, ",")[[1]])
+nodes <- opt$nodes
 
 ############## The Actual Code™ ###############
 # Read in the matrices

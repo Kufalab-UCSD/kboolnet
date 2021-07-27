@@ -52,20 +52,20 @@ if (!dir.exists(opt$out)) {
 outPath       <- paste0(normalizePath(opt$out), "/")
 
 # Parse modules option to a list
-modules <- trimws(strsplit(opt$modules, ",")[[1]])
+modules <- opt$modules
 
 # Same for inputs options
-if (is.na(opt$inputInhibs)) {
+if (is.na(opt$inputInhibs) & is.na(opt$inputStimuli)) {
   stop("Please provide input nodes to be toggled in simulation rounds")
 }
-inputInhibs <- trimws(strsplit(opt$inputInhibs, ",")[[1]])
-inputStimuli <- trimws(strsplit(opt$inputStimuli, ",")[[1]])
+inputInhibs <- opt$inputInhibs
+inputStimuli <- opt$inputStimuli
 
 # Same for outputs
 if (is.na(opt$outputs)) {
   stop("Please provide output nodes to be toggled in simulation rounds")
 }
-outputs <- trimws(strsplit(opt$outputs, ",")[[1]])
+outputs <- opt$outputs
 
 # Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided

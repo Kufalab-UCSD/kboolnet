@@ -36,7 +36,7 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(out="./plot.pdf", nodes="", nodomains=FALSE, ratio=0.8)
+default <- list(out="./plot.pdf", nodes=c(), nodomains=FALSE, ratio=0.8)
 opt <- setDefaults(config, default)
 
 # Stop if no file provided
@@ -45,7 +45,7 @@ if (is.na(opt$file)) {
 }
 
 # Process the nodes argument into a list
-nodes <- trimws(strsplit(opt$nodes, ",")[[1]])
+nodes <- opt$nodes
 
 ################# Path loading/processing/plotting ##################
 # Load path and set first col as row names

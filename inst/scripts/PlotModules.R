@@ -40,7 +40,7 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, file=NA, driveFile=NA, nodomains=FALSE)
+default <- list(modules=c(), out="./out/", minQuality=0, file=NA, driveFile=NA, nodomains=FALSE)
 opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
@@ -52,7 +52,7 @@ if (!dir.exists(opt$out)) {
 outPath       <- paste0(normalizePath(opt$out), "/")
 
 # Parse modules option to a list
-modules <- trimws(strsplit(opt$modules, ",")[[1]])
+modules <- opt$modules
 
 # Make sure input file path was provided
 if (is.na(opt$file) & is.na(opt$driveFile)){ # If neither file was provided

@@ -41,8 +41,8 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height= NA,
-                MIDASFile=NA, MIDASDriveFile=NA, bin=0, normalize=FALSE, pretreat=FALSE, celltype="all")
+default <- list(modules=c(), out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height= NA,
+                MIDASFile=NA, MIDASDriveFile=NA, bin=0, normalize=FALSE, pretreat=FALSE, celltype=c("all"))
 opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
@@ -54,8 +54,8 @@ if (!dir.exists(opt$out)) {
 outPath       <- paste0(normalizePath(opt$out), "/")
 
 # Parse modules option to a list
-modules <- trimws(strsplit(opt$modules, ",")[[1]])
-cell_types <- trimws(strsplit(opt$celltype, ",")[[1]])
+modules <- opt$modules
+cell_types <- opt$celltype
 
 # Make sure input file paths were provided
 if (is.na(opt$rxnconFile) & is.na(opt$rxnconDriveFile)){ # If neither file was provided

@@ -5,5 +5,5 @@ config <- list(
   bin = 0,
   normalize = TRUE,
   pretreat = TRUE,
-  celltype = "SW48, HT29"
+  celltype = c("SW48", "HT29")
 )

@@ -50,7 +50,7 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(modules="", out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, time=20, inhib="", KO="")
+default <- list(modules=c(), out="./out/", minQuality=0, ligands=NA, file=NA, driveFile=NA, time=20, inhib=c(), KO=c())
 opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
@@ -62,17 +62,17 @@ if (!dir.exists(opt$out)) {
 outPath       <- paste0(normalizePath(opt$out), "/")
 
 # Parse modules option to a list
-modules <- trimws(strsplit(opt$modules, ",")[[1]])
+modules <- opt$modules
 
 # Same for ligands option
 if (is.na(opt$ligands)) {
   stop("Please provide ligand(s) to be toggled in simulation rounds")
 }
-ligands <- trimws(strsplit(opt$ligands, ",")[[1]])
+ligands <- opt$ligands
 
 # Same for inhibitors and KOs
-inhib <- trimws(strsplit(opt$inhib, ",")[[1]])
-KOs <- trimws(strsplit(opt$KO, ",")[[1]])
+inhib <- opt$inhib
+KOs <- opt$KO
 
 # Escape inhibitor regexes
 inhib <- gsub('([.|()\\^{}+$?]|\\[|\\])', '\\\\\\1', inhib)

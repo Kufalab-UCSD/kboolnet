@@ -1,5 +1,5 @@
 config <- list(
-    driveFile = "https://docs.google.com/spreadsheets/d/1I0RkJC8NvFx2VlLw7GbQny8U1ldpjFXhlSIqeVgFoCs/edit?usp=sharing",
+    file = "./inconsistent_example.xlsx",
     runs = list(
       one = list(
         toggle = c('Ligand'),

@@ -16,26 +16,23 @@ suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(RCy3))
 
 ############### Argument parsing and setup ###################
-# Get commandline args
-option_list = list(
-  make_option(c("--config", "-c"), action="store", default=NA, type="character",
-              help="Path of config file. You can specify parameters here instead of passing them as command-line
-              arguments"),
-  make_option(c("--file", "-f"), action="store", default=NA, type="character",
-              help="Name of csv file containing path/attractor to be animated"),
-  make_option(c("--out", "-o"), action="store", default=NA, type="character",
-              help="Name of mp4 file to which animation should be written. [default: animation.mp4]"),
-  make_option(c("--textsize", "-t"), action="store", default=NA, type="numeric",
-              help="Size of frame number label. [default: 50]"),
-  make_option(c("--zoom", "-z"), action="store", default=NA, type="numeric",
-              help="Zoom factor for Cytoscape render. Higher = higher quality [default: 200]")
-)
-opt <- parse_args(OptionParser(option_list=option_list))
+# If not interactive, get config file
+if (!interactive()) {
+  args = commandArgs(trailingOnly = TRUE)
+  if (length(args) != 1) {
+    stop("Please provide path to config file as the only argument to the script.")
+  } else if (!file.exists(normalizePath(args))) {
+    stop("File ", args, " does not exist.")
+  }
 
-# Load config file if provided
-if ("config" %in% names(opt)) {
-  opt <- loadConfig(opt)
+  source(normalizePath(args))
 }
+
+# Check that config is loaded, print it
+if (!exists("config")) {
+  stop("Config file must be loaded in before running the script.")
+}
+print(config)
 
 # Set default args if they are not already set
 default <- list(file=NA, out="./animation.mp4", textsize=50, zoom=200)
