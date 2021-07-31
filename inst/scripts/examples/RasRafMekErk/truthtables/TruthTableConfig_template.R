@@ -1,4 +1,4 @@
-config <- c(
+config <- list(
   file = "../RasRafMekErk_master.xlsx",
 	modules = "",
 	inputStimuli = "",

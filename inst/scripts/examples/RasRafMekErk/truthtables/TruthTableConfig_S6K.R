@@ -1,4 +1,4 @@
-config <- c(
+config <- list(
   file = "../RasRafMekErk_master.xlsx",
 	modules = "S6K",
 	inputStimuli = c("Erk_p+_S6K_[CTD(T421S424)]", "mTORC1_p+_S6K_[HM(T389)]", "PDK1_p+_S6K_[Tloop(T229)]"),

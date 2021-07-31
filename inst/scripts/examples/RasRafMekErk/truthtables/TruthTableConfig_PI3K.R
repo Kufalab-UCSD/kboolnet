@@ -1,4 +1,4 @@
-config <- c(
+config <- list(
   file = "../RasRafMekErk_master.xlsx",
 	modules = "PI3K-Akt",
 	inputStimuli = c("EGF_[*]--0", "MutantPI3K"),
