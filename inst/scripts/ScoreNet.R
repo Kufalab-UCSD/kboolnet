@@ -41,8 +41,8 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(modules=c(), out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height= NA,
-                MIDASFile=NA, MIDASDriveFile=NA, bin=0, normalize=FALSE, pretreat=FALSE, celltype=c("all"))
+default <- list(modules=c(), out="./out/", minQuality=0, rxnconFile=NA, rxnconDriveFile=NA, width=NA, height=NA,
+                MIDASFile=NA, MIDASDriveFile=NA, bin=0, normalize=FALSE, pretreat=FALSE, celltype=c("all"), initState=NA)
 opt <- setDefaults(config, default)
 
 # Create out dir if it does not exist
@@ -139,7 +139,11 @@ symbolMapping$name  <- gsub("[[:space:]]", "", symbolMapping$name)
 symbolMapping       <- symbolMapping[,1:2]
 
 # Load initial states from file
-initStates <- read.csv(paste0(netFilePrefix, '_initial_vals.csv'), col.names=c("ID","state","name"), header=F)
+if (is.na(opt$initState)) {
+  initStates <- read.csv(paste0(netFilePrefix, '_initial_vals.csv'), col.names=c("ID","state","name"), header=F)
+} else {
+  initStates <- read.csv(opt$initState, col.names=c("ID","state","name"), header=F)
+}
 initStates$name <- gsub("# ", "", initStates$name) # Clean up names
 initStates$name <- gsub(" ", "", initStates$name)
 
