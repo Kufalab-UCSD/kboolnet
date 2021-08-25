@@ -19,5 +19,6 @@ Imports:
     egg,
     openxlsx,
     optparse,
-    igraph
+    igraph,
+    RCy3
 SystemRequirements: python3
