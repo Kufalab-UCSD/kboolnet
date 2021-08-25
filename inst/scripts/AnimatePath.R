@@ -14,6 +14,7 @@
 options(stringsAsFactors = F)
 suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(RCy3))
+library(kboolnet)
 
 ############### Argument parsing and setup ###################
 # If not interactive, get config file
