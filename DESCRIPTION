@@ -1,11 +1,11 @@
 Package: kboolnet
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Title: kboolnet: A Toolkit for the Verification, Validation, and Visualization of rxncon Models
+Version: 1.0.0
+Author: Willow Carretero Chavez, Marcus Krantz, Edda Klipp, Irina Kufareva
+Maintainer:  <carreter@mit.net>
+Description: Toolkit that provides a workflow for the verification, validation, and visualization of
+    models encoded in the rxncon formalism.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
