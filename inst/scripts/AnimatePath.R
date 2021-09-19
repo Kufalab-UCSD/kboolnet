@@ -14,6 +14,7 @@
 options(stringsAsFactors = F)
 suppressPackageStartupMessages(library(optparse))
 suppressPackageStartupMessages(library(RCy3))
+library(kboolnet)
 
 ############### Argument parsing and setup ###################
 # If not interactive, get config file
@@ -35,7 +36,7 @@ if (!exists("config")) {
 print(config)
 
 # Set default args if they are not already set
-default <- list(file=NA, out="./animation.mp4", textsize=50, zoom=200)
+default <- list(file=NA, out="./animation.gif", textsize=50, zoom=200)
 opt <- setDefaults(config, default)
 
 # Stop if no file provided
@@ -44,8 +45,8 @@ if (is.na(opt$file)) {
 }
 
 # Check if out is an mp4
-if (!grepl("\\.mp4$", opt$out)) {
-  opt$out <- paste0(opt$out, ".mp4")
+if (!grepl("\\.gif$", opt$out)) {
+  opt$out <- paste0(opt$out, ".gif")
 }
 
 # Create a temp folder to put the frames in
@@ -127,14 +128,14 @@ cat("Labeling frames...", "\n")
 frames <- dir(tmpdir)
 pb <- txtProgressBar(min=0, max=length(frames), style=3) # Progress bar
 for (i in 1:length(frames)) {
-  frameFile <- paste0(tmpdir, frames[i])
-  system2(command = "convert", args = c(frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", frameFile))
+  frameFile <- normalizePath(paste0(tmpdir, frames[i]), mustWork = FALSE)
+  system2(command = "magick", args = c("convert", frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", frameFile))
   setTxtProgressBar(pb, i)
 }
 close(pb)
 
-# Use ffmpeg to stitch to a video
+# Use imagemagick to stitch to a gif
 cat("Converting to video...", "\n")
-system2(command = "ffmpeg", args = c("-framerate 5 -r 5 -loglevel panic -i", paste0(tmpdir, formatStr), opt$out))
+system2(command = "magick", args = c("convert -delay 20 -loop 0", normalizePath(paste0(tmpdir, '/*'), mustWork = FALSE), opt$out))
 
 cat("Animation written to file", opt$out, "\n")
