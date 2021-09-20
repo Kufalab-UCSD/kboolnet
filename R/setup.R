@@ -88,7 +88,9 @@ setupKboolnet <- function() {
         cat(paste0(newInstallDir, " is non-empty. May cause issues.", "\n"))
       }
 
-      dir.create(newInstallDir, recursive = TRUE)
+      if (!dir.exists(newInstallDir)) {
+        dir.create(newInstallDir, recursive = TRUE)
+      }
       if (!dir.exists(newInstallDir)) {
         cat(tail(warnings, 1), "\n")
         cat(paste0("Unable to write to directory ", newInstallDir, ", please try a different directory.\n"))
