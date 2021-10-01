@@ -74,7 +74,7 @@ setupKboolnet <- function() {
     while (TRUE) {
       newInstallDir <- readline(paste0("Enter directory in which to install kboolnet scripts to (", oldInstallDir, "): "))
       if (trimws(newInstallDir) != "") {
-        newInstallDir <- normalizePath(newInstallDir)
+        newInstallDir <- normalizePath(newInstallDir, mustWork = FALSE)
       } else {
         newInstallDir <- oldInstallDir
       }
@@ -109,7 +109,7 @@ setupKboolnet <- function() {
   while (TRUE) {
     newRxnconDir <- readline(paste0("Enter existing rxncon2____.py script directory (", oldRxnconDir, "): "))
     if (trimws(newRxnconDir) != "") {
-      newRxnconDir <- normalizePath(newRxnconDir)
+      newRxnconDir <- normalizePath(newRxnconDir, mustWork = FALSE)
     } else {
       newRxnconDir <- oldRxnconDir
     }
@@ -129,7 +129,7 @@ setupKboolnet <- function() {
   }
   while (installBNG) {
     newBNGDir <- readline("Enter existing BioNetGen install directory: ")
-    newBNGDir <- normalizePath(newBNGDir)
+    newBNGDir <- normalizePath(newBNGDir, mustWork = FALSE)
 
     if (file.exists(paste0(newBNGDir, "/BNG2.pl"))) {
       break
