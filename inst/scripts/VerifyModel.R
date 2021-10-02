@@ -67,8 +67,8 @@ if (!(is.na(opt$driveFile))) {
   masterFile <- normalizePath(opt$file)
 
   # File verification
-  if (!grepl("\\.xlsx$", masterFile)) { # Make sure file is Excel file
-    stop("rxncon file must be an Excel file (.xslx extension)")
+  if (!grepl("\\.xls(|x)$", masterFile)) { # Make sure file is Excel file
+    stop("rxncon file must be an Excel file (.xlsx extension)")
   } else if (!file.exists(masterFile)) { # Make sure file exists
     stop("rxncon file does not exist")
   }
