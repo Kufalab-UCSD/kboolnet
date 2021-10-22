@@ -40,6 +40,10 @@ setupKboolnet <- function() {
     stop("Could not run python3. Please install before continuing!")
   }
 
+  pythonVer <- system2(newPythonCommand, args = "--version", stdout=TRUE)
+  pythonLocation <- system2(newPythonCommand, args = "-c \"import sys; print(sys.executable)\"", stdout=TRUE)
+  cat("Running", pythonVer, "from", pythonLocation, "\n")
+
   if (system2(newPythonCommand, args = c("-m", "pip"), stdout = FALSE) != 0) {
     stop("Could not run pip. Please install before continuing!")
   }
