@@ -31,7 +31,7 @@ loadPackageConfig <- function() {
 callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/extract_modules.py")
-  stderr <- callPython(c(path, "--file", addQuotes(inFile), "--modules", paste0('"', paste0(modules, collapse=","), '"'),
+  stderr <- callPython(c(addQuotes(path), "--file", addQuotes(inFile), "--modules", paste0('"', paste0(modules, collapse=","), '"'),
                          "--output", addQuotes(outFile), "--quality", quality, args))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
@@ -43,7 +43,7 @@ callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c())
 callRxncon2Reg <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
-  stderr <-  callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile), args))
+  stderr <-  callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile), args))
 
   # if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -55,7 +55,7 @@ callRxncon2Reg <- function(inFile, outFile, args=c()) {
 callRxncon2BNG <- function(inFile, outFile, args=c()) {
   cleanFiles(addQuotes(paste0(outFile, c(".bngl", ".xml", ".rnf"))))
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2bngl.py")
-  stderr <- callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile)))
+  stderr <- callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile)))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
@@ -66,7 +66,7 @@ callRxncon2BNG <- function(inFile, outFile, args=c()) {
 callRxncon2Boolnet <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
   path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
-  stderr <- callPython(c(path, addQuotes(inFile), "--output", addQuotes(outFile), args))
+  stderr <- callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile), args))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
@@ -82,7 +82,7 @@ callNFSim <- function(inFile, args=c()) {
   }
 
   path <- paste0(BNGDir, "/bin/NFsim")
-  suppressWarnings(stderr <- system2(path, args = c("-rnf", inFile)))
+  suppressWarnings(stderr <- system2(addQuotes(path), args = c("-rnf", inFile)))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
