@@ -40,7 +40,7 @@ print(config)
 
 
 # Set default args if they are not already set
-default <- list(file=NA, driveFile=NA, on=c(), off=c(), initState=NA, outPath="./BoolNetSim_out")
+default <- list(file=NA, driveFile=NA, on=c(), off=c(), initState=NA, out="./BoolNetSim_out")
 opt <- setDefaults(config, default)
 
 # Normalize paths
