@@ -68,7 +68,7 @@ setupKboolnet <- function() {
   # If already installed, ask if we want to reinstall
   reinstall <- FALSE
   if (installed) {
-    cat(paste0("rxncon alredy installed in directory ", oldInstallDir, ""), "\n")
+    cat(paste0("kboolnet scripts already installed in directory ", oldInstallDir, ""), "\n")
     reinstall <- getYesNo("Would you like to reinstall the kboolnet scripts? (y/N): ", default = FALSE)
   }
 
