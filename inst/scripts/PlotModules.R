@@ -109,11 +109,13 @@ for (module in modules) {
 
   cat(paste0("Plotting module ", module, "..."), "\n")
   regFile <- paste0(outPath, "module_", module, ".xgmml")
+  regFileActual <- paste0(outPath, "module_", module, "_reg.xgmml")
+  cleanFiles(regFileActual)
   callRxncon2Reg(modulesFile, regFile)
 
 
   if (opt$nodomains) {
-    removeDomainsXGMML(regFile, regFile)
+    removeDomainsXGMML(regFileActual, regFileActual)
   }
 }
 
@@ -124,12 +126,14 @@ cat("Extracting all modules ...", "\n")
 callExtractModules(masterFile, modulesFile, "")
 
 # Plot regulatory graph
-regFile <- paste0(outPath, "all_modules_reg.xgmml")
+regFile <- paste0(outPath, "all_modules.xgmml")
+regFileActual <- paste0(outPath, "all_modules_reg.xgmml")
+cleanFiles(regFileActual)
 cat(paste0("Plotting all modules..."), "\n")
 callRxncon2Reg(modulesFile, regFile)
 
 if (opt$`nodomains`) {
-  removeDomainsXGMML(paste0(outPath, "all_modules_reg.xgmml"),)
+  removeDomainsXGMML(regFileActual, regFileActual)
 }
 
 # Load xgmml file for all module file
