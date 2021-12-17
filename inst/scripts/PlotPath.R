@@ -66,7 +66,7 @@ if (length(nodes) > 0) {
 
 # Remove domain names if requested
 if (opt$nodomains) {
-  rownames(path) <- removeDomains(path)
+  rownames(path) <- removeDomains(rownames(path))
 }
 
 plotPath(path, opt$out, ratio=opt$ratio)
