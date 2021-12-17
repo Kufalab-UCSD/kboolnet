@@ -130,9 +130,9 @@ pb <- txtProgressBar(min=0, max=length(frames), style=3) # Progress bar
 for (i in 1:length(frames)) {
   frameFile <- normalizePath(paste0(tmpdir, frames[i]), mustWork = FALSE)
   if(.Platform$OS.type == "unix") {
-    system2(command = "convert", args = c(frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", frameFile))
+    system2(command = "convert", args = c(frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", addQuotes(frameFile)))
   } else {
-    system2(command = "magick", args = c("convert", frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", frameFile))
+    system2(command = "magick", args = c("convert", frameFile, "-trim +repage -fill black -pointsize 50 -gravity NorthWest -annotate +10+10 '%t'", addQuotes(frameFile)))
   }
   setTxtProgressBar(pb, i)
 }
@@ -141,9 +141,9 @@ close(pb)
 # Use imagemagick to stitch to a gif
 cat("Converting to video...", "\n")
 if(.Platform$OS.type == "unix") {
-  system2(command = "convert", args = c("-limit memory 1GiB -delay 20 -loop 0", normalizePath(paste0(tmpdir, '/*'), mustWork = FALSE), opt$out))
+  system2(command = "convert", args = c("-limit memory 2GiB -delay 20 -loop 0", addQuotes(normalizePath(paste0(tmpdir, '/*'), mustWork = FALSE)), addQuotes(opt$out)))
 } else {
-  system2(command = "magick", args = c("convert -delay 20 -loop 0", normalizePath(paste0(tmpdir, '/*'), mustWork = FALSE), opt$out))
+  system2(command = "magick", args = c("convert -delay 20 -loop 0", addQuotes(normalizePath(paste0(tmpdir, '/*'), mustWork = FALSE)), addQuotes(opt$out)))
 }
 
 cat("Animation written to file", opt$out, "\n")
