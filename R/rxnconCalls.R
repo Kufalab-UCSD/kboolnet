@@ -42,10 +42,11 @@ callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c())
 
 callRxncon2Reg <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
-  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2regulatorygraph.py")
+  config <- loadPackageConfig()
+  path <- paste0(config$value[config$setting == "rxnconDir"], "/rxncon2regulatory.py")
   stderr <-  callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile), args))
 
-  # if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
+
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
     cat(paste(stderr, "\n"))
     stop("Error during module plotting. Please run rxncon2regulatorygraph.py on its own with the -v DEBUG flag.")
@@ -54,7 +55,8 @@ callRxncon2Reg <- function(inFile, outFile, args=c()) {
 
 callRxncon2BNG <- function(inFile, outFile, args=c()) {
   cleanFiles(addQuotes(paste0(outFile, c(".bngl", ".xml", ".rnf"))))
-  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2bngl.py")
+  config <- loadPackageConfig()
+  path <- paste0(config$value[config$setting == "rxnconDir"], "/rxncon2bngl.py")
   stderr <- callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile)))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
@@ -65,7 +67,8 @@ callRxncon2BNG <- function(inFile, outFile, args=c()) {
 
 callRxncon2Boolnet <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
-  path <- paste0(system.file(package="kboolnet"), "/python/rxncon2boolnet.py")
+  config <- loadPackageConfig()
+  path <- paste0(config$value[config$setting == "rxnconDir"], "/rxncon2boolnet.py")
   stderr <- callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile), args))
 
   if (any(grepl("Error", stderr, ignore.case = TRUE))) {
