@@ -43,7 +43,7 @@ callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c())
 callRxncon2Reg <- function(inFile, outFile, args=c()) {
   cleanFiles(outFile)
   config <- loadPackageConfig()
-  path <- paste0(config$value[config$setting == "rxnconDir"], "/rxncon2regulatory.py")
+  path <- paste0(config$value[config$setting == "rxnconDir"], "/rxncon2regulatorygraph.py")
   stderr <-  callPython(c(addQuotes(path), addQuotes(inFile), "--output", addQuotes(outFile), args))
 
 
