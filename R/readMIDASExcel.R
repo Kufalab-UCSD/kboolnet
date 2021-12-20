@@ -23,7 +23,7 @@ compareNA <- function(v1,v2) {
 }
 
 readMIDASExcel <- function(MIDASfile, cell_types = "all") {
-  if (length(cell_types) == 1 & cell_types == "all") {
+  if (length(cell_types) == 1 & any(cell_types == "all")) {
     cell_types <- c()
   }
 
