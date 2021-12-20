@@ -255,4 +255,4 @@ ggsave(paste0(outPath, "results.pdf"), width = 7, height = 5, p)
 # Write to file as well
 write.csv(data, paste0(netFilePrefix, ".csv"))
 
-cat("Done.", "\n")
+cat("Done! Output written to directory", outPath, "\n")

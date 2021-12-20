@@ -331,4 +331,4 @@ for (i in 1:nrow(results)) {
 # Write to csv
 write.csv(results, file = paste0(outPath, "truth_table.csv"), row.names = FALSE)
 
-cat("Done.", "\n")
+cat("Done! Output written to directory", outPath, "\n")

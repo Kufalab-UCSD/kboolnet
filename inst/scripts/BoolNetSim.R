@@ -141,3 +141,5 @@ attractorOrder <- getOrder(res$attractor)
 # Save plots
 plotPath(res$path[pathOrder,,drop=F], paste0(outPath, 'path.pdf'))
 plotPath(res$attractor[attractorOrder,,drop=F], paste0(outPath, 'attractor.pdf'))
+
+cat("Done! Output written to directory", outPath, "\n")

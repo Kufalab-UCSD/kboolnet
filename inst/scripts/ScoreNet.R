@@ -426,4 +426,4 @@ if (opt$bin != 0) saveRDS(binMIDASlist, file = paste0(outPath, "Experimental_Bin
 if (opt$bin == 0) saveRDS(avgMIDASlist, file = paste0(outPath, "Experimental_Averaged_MIDAS.rds"))
 saveRDS(simMIDASlist, file = paste0(outPath, "Simulation_MIDAS.rds"))
 
-cat("Done.", "\n")
+cat("Done! Output written to directory", outPath, "\n")

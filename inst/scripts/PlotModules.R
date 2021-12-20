@@ -155,4 +155,4 @@ for (module in modules) {
 mapping <- data.frame(node = names(all_nodes), module = sapply(all_nodes, paste0, collapse = ","))
 write.csv(mapping, file = paste0(outPath, "node_modules.csv"), row.names = F)
 
-cat("Done!", "\n")
+cat("Done! Output written to directory", outPath, "\n")

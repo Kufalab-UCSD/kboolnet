@@ -70,3 +70,4 @@ if (opt$nodomains) {
 }
 
 plotPath(path, opt$out, ratio=opt$ratio)
+cat("Done! Output written to", opt$path, "\n")

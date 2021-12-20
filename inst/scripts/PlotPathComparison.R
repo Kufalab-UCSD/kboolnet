@@ -58,3 +58,5 @@ rownames(mat2) <- mat2[,1]
 mat2 <- mat2[,2:ncol(mat2), drop=F]
 
 comparePaths(mat1, mat2, output = opt$output, nodes = nodes, nodomains = opt$nodomains)
+
+cat("Done! Output written to", opt$output, "\n")

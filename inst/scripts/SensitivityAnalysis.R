@@ -299,3 +299,4 @@ if(sum(ligReaction) == 0) {
   cat("Done.", "\n")
 }
 
+cat("Done! Output written to directory", outPath, "\n")

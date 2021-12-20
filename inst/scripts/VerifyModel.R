@@ -382,3 +382,4 @@ for (i in 1:length(stateSpaces)) {
 }
 write_graph(globalStateSpace, file = paste0(outPath, "global_state_space.graphml"), format = "graphml")
 
+cat("Done! Output written to directory", outPath, "\n")
