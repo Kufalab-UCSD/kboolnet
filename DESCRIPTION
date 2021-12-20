@@ -20,5 +20,6 @@ Imports:
     openxlsx,
     optparse,
     igraph,
-    RCy3
+    RCy3,
+    xml2
 SystemRequirements: python3
