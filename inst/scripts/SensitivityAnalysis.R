@@ -161,7 +161,7 @@ if (is.na(opt$ligands)) {
 ligands <- opt$ligands
 
 # Same for outputs
-if (is.na(opt$outputs)) {
+if (any(is.na(opt$outputs))) {
   stop("Please provide node(s) to be used as output in sensitivity analysis")
 }
 outputs <- opt$outputs
