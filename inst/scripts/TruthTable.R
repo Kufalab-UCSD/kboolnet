@@ -56,14 +56,14 @@ outPath       <- paste0(normalizePath(opt$out), "/")
 modules <- opt$modules
 
 # Same for inputs options
-if (is.na(opt$inputInhibs) & is.na(opt$inputStimuli)) {
+if (any(is.na(opt$inputInhibs)) & any(is.na(opt$inputStimuli))) {
   stop("Please provide input nodes to be toggled in simulation rounds")
 }
 inputInhibs <- opt$inputInhibs
 inputStimuli <- opt$inputStimuli
 
 # Same for outputs
-if (is.na(opt$outputs)) {
+if (any(is.na(opt$outputs))) {
   stop("Please provide output nodes to be toggled in simulation rounds")
 }
 outputs <- opt$outputs
