@@ -16,7 +16,7 @@ setupKboolnet <- function() {
   cat("Manual configuration entry. Leave response blank to keep default/previous settings, which are indicated in parentheses.\n")
 
   # Load in config file if it exists
-  configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
+  configFile <- paste0(rappdirs::user_config_dir(appname="kboolnet"), "/config.csv")
   if (file.exists(configFile)) {
     config <- read.csv(file = configFile)
     oldPythonCommand <- config$value[config$setting == "pythonCommand"]
@@ -148,6 +148,10 @@ setupKboolnet <- function() {
 
   newDefaults <- data.frame(setting = c("rxnconDir", "BNGDir", "installDir", "installed", "pythonCommand"),
                             value = c(newRxnconDir, newBNGDir, newInstallDir, TRUE, newPythonCommand))
+  configDir <- rappdirs::user_config_dir(appname="kboolnet")
+  if (!dir.exists(configDir)) {
+    dir.create(configDir, recursive = TRUE)
+  }
   write.csv(newDefaults, file = configFile, row.names = FALSE)
   cat("Configuration successfully set.\n")
 
