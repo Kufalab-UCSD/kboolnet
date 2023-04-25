@@ -3,7 +3,7 @@ Type: Package
 Title: kboolnet: A Toolkit for the Verification, Validation, and Visualization of rxncon Models
 Version: 1.0.0
 Author: Willow Carretero Chavez, Marcus Krantz, Edda Klipp, Irina Kufareva
-Maintainer:  <carreter@mit.net>
+Maintainer: <carreter@mit.net>
 Description: Toolkit that provides a workflow for the verification, validation, and visualization of
     models encoded in the rxncon formalism.
 License: What license is it under?
@@ -24,3 +24,4 @@ Imports:
     xml2,
     rappdirs
 SystemRequirements: python3
+RoxygenNote: 7.2.3
