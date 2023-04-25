@@ -36,6 +36,11 @@ callExtractModules <- function(inFile, outFile, modules="", quality=0, args=c())
 
   if (any(grepl("Error", stderr, ignore.case = TRUE)) | !file.exists(outFile)) {
     cat(paste(stderr, "\n"))
+
+    if (any(grepl("xlrd", stderr, ignore.case = TRUE))) {
+        stop("Error during module extraction. Error was raised by xlrd module; are you trying to load an xlsx file? xlrd dropped support for xlsx files in v2.0.0, please downgrade to v1.2.0. See FAQ in the repository wiki for more details.")
+    }
+
     stop("Error during module extraction. Please run extract_modules.py on its own with the -v DEBUG flag.")
   }
 }
