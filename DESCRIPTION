@@ -21,5 +21,6 @@ Imports:
     optparse,
     igraph,
     RCy3,
-    xml2
+    xml2,
+    rappdirs
 SystemRequirements: python3

@@ -20,7 +20,7 @@ callPython <- function(args) {
 }
 
 loadPackageConfig <- function() {
-  configFile <- paste0(system.file(package="kboolnet"), "/config.csv")
+  configFile <- paste0(rappdirs::user_config_dir(appname="kboolnet"), "/config.csv")
   if (!file.exists(configFile)) {
     stop("Package config file could not be found. Please run setupKboolnet() in an interactive terminal first!")
   }
